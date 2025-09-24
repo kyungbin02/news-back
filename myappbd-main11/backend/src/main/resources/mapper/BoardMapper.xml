@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myapp.backend.domain.board.mapper.BoardMapper">
+    
+    <!-- 게시글 목록 조회 -->
+    <select id="getBoardList" resultType="myapp.backend.domain.board.vo.BoardVO">
+        SELECT 
+            b.board_id,
+            b.board_content,
+            b.uploaded_at,
+            b.user_id,
+            b.image_id,
+            b.view,
+            u.username,
+            i.image_url,
+            CASE 
+                WHEN i.image_url IS NOT NULL AND i.image_url LIKE '%,%' 
+                THEN i.image_url
+                ELSE i.image_url
+            END as imageUrls
+        FROM board b
+        JOIN user u ON b.user_id = u.user_id
+        LEFT JOIN images i ON b.image_id = i.image_id
+        ORDER BY b.uploaded_at DESC
+    </select>
+    
+    <!-- 개별 글 조회 -->
+    <select id="getBoardById" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
+        SELECT 
+            b.board_id,
+            b.board_content,
+            b.uploaded_at,
+            b.user_id,
+            b.image_id,
+            b.view,
+            u.username,
+            i.image_url,
+            CASE 
+                WHEN i.image_url IS NOT NULL AND i.image_url LIKE '%,%' 
+                THEN i.image_url
+                ELSE i.image_url
+            END as imageUrls
+        FROM board b
+        JOIN user u ON b.user_id = u.user_id
+        LEFT JOIN images i ON b.image_id = i.image_id
+        WHERE b.board_id = #{board_id}
+    </select>
+    
+    <!-- 게시글 작성 (동적 쿼리) -->
+    <insert id="insertBoard" parameterType="myapp.backend.domain.board.vo.BoardVO" useGeneratedKeys="true" keyProperty="board_id">
+        INSERT INTO board (
+            board_content,
+            user_id,
+            uploaded_at,
+            view
+            <if test="image_id != null and image_id != 0">
+                , image_id
+            </if>
+        ) VALUES (
+            #{board_content},
+            #{user_id},
+            NOW(),
+            0
+            <if test="image_id != null and image_id != 0">
+                , #{image_id}
+            </if>
+        )
+    </insert>
+    
+    <!-- 조회수 증가 -->
+    <update id="updateViewCount" parameterType="int">
+        UPDATE board 
+        SET view = view + 1 
+        WHERE board_id = #{board_id}
+    </update>
+    
+    <!-- 상세페이지 조회 -->
+    <select id="getBoardDetailById" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
+        SELECT 
+            b.board_id,
+            b.board_content,
+            i.image_url,
+            b.uploaded_at,
+            b.user_id,
+            b.image_id,
+            b.view,
+            u.username,
+            CASE 
+                WHEN i.image_url IS NOT NULL AND i.image_url LIKE '%,%' 
+                THEN i.image_url
+                ELSE i.image_url
+            END as imageUrls
+        FROM board b
+        JOIN user u ON b.user_id = u.user_id
+        LEFT JOIN images i ON b.image_id = i.image_id
+        WHERE b.board_id = #{board_id}
+    </select>
+  
+    <!-- 작성자 조회 -->
+    <select id="findAuthorUserId" parameterType="int" resultType="int">
+        SELECT user_id
+        FROM board
+        WHERE board_id = #{board_id}
+    </select>
+
+    <!-- 게시글 삭제 -->
+    <delete id="deleteBoard" parameterType="int">
+        DELETE FROM board
+        WHERE board_id = #{board_id}
+    </delete>
+    
+    <!-- 이미지 정보 저장 -->
+    <insert id="insertImage" parameterType="myapp.backend.domain.board.vo.ImageVO" useGeneratedKeys="true" keyProperty="image_id">
+        INSERT INTO images (image_url) VALUES (#{image_url})
+    </insert>
+    
+    <!-- 게시글의 image_id 업데이트 -->
+    <update id="updateBoardImageId">
+        UPDATE board SET image_id = #{image_id} WHERE board_id = #{board_id}
+    </update>
+    
+    <!-- 이미지 삭제 -->
+    <delete id="deleteImage" parameterType="int">
+        DELETE FROM images
+        WHERE image_id = #{image_id}
+    </delete>
+    
+    <!-- 사용자의 최근 생성된 게시글 조회 -->
+    <select id="getLatestBoardByUserId" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
+        SELECT * FROM board 
+        WHERE user_id = #{userId} 
+        ORDER BY uploaded_at DESC 
+        LIMIT 1
+    </select>
+    
+    <!-- 게시글 수정 -->
+    <update id="updateBoard" parameterType="myapp.backend.domain.board.vo.BoardVO">
+        UPDATE board
+        <set>
+            <if test="board_content != null">board_content = #{board_content},</if>
+            <if test="image_id != null and image_id != 0">image_id = #{image_id},</if>
+        </set>
+        WHERE board_id = #{board_id}
+    </update>
+    
+    <!-- 좋아요 추가 -->
+    <insert id="insertBoardLike" parameterType="myapp.backend.domain.board.vo.BoardLikeVO">
+        INSERT INTO board_likes (user_id, board_id) VALUES (#{user_id}, #{board_id})
+    </insert>
+    
+    <!-- 좋아요 취소 -->
+    <delete id="deleteBoardLike">
+        DELETE FROM board_likes WHERE user_id = #{arg0} AND board_id = #{arg1}
+    </delete>
+    
+    <!-- 좋아요 존재 여부 확인 -->
+    <select id="existsBoardLike" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM board_likes WHERE user_id = #{arg0} AND board_id = #{arg1}
+    </select>
+    
+    <!-- 게시글 좋아요 수 조회 -->
+    <select id="getBoardLikeCount" parameterType="int" resultType="int">
+        SELECT COUNT(*) FROM board_likes WHERE board_id = #{board_id}
+    </select>
+    
+    <!-- 인증된 사용자를 위한 게시글 목록 조회 (좋아요 상태 포함) -->
+    <select id="getBoardListWithLikeStatus" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
+        SELECT 
+            b.board_id,
+            b.board_content,
+            b.uploaded_at,
+            b.user_id,
+            b.image_id,
+            b.view,
+            u.username,
+            i.image_url,
+            CASE 
+                WHEN i.image_url IS NOT NULL AND i.image_url LIKE '%,%' 
+                THEN i.image_url
+                ELSE i.image_url
+            END as imageUrls,
+            CASE 
+                WHEN bl.user_id IS NOT NULL THEN true
+                ELSE false
+            END as isLiked,
+            (SELECT COUNT(*) FROM board_likes WHERE board_id = b.board_id) as likeCount
+        FROM board b
+        JOIN user u ON b.user_id = u.user_id
+        LEFT JOIN images i ON b.image_id = i.image_id
+        LEFT JOIN board_likes bl ON b.board_id = bl.board_id AND bl.user_id = #{userId}
+        ORDER BY b.uploaded_at DESC
+    </select>
+
+    
+</mapper> 

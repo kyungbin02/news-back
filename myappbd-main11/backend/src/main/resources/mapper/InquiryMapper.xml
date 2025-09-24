@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myapp.backend.domain.inquiry.mapper.InquiryMapper">
+
+    <!-- 사용자용 문의사항 목록 조회 (본인 것만) -->
+    <select id="getInquiryListByUserId" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        WHERE i.user_id = #{user_id}
+        ORDER BY i.created_at DESC
+    </select>
+
+    <!-- 사용자용 문의사항 상세 조회 (본인 것만) -->
+    <select id="getInquiryDetailByUserId" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        WHERE i.inquiry_id = #{inquiry_id} AND i.user_id = #{user_id}
+    </select>
+
+    <!-- 관리자용 문의사항 목록 조회 (전체) -->
+    <select id="getAdminInquiryList" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        ORDER BY i.created_at DESC
+    </select>
+
+    <!-- 관리자용 문의사항 상세 조회 -->
+    <select id="getAdminInquiryDetail" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        WHERE i.inquiry_id = #{inquiry_id}
+    </select>
+
+    <!-- 문의사항 작성 -->
+    <insert id="insertInquiry" parameterType="myapp.backend.domain.inquiry.vo.InquiryVO" useGeneratedKeys="true" keyProperty="inquiry_id">
+        INSERT INTO inquiry (user_id, inquiry_title, inquiry_content, inquiry_status, created_at, updated_at)
+        VALUES (#{user_id}, #{inquiry_title}, #{inquiry_content}, #{inquiry_status}, NOW(), NOW())
+    </insert>
+
+    <!-- 문의사항 수정 (답변 전까지만) -->
+    <update id="updateInquiry" parameterType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        UPDATE inquiry 
+        SET inquiry_title = #{inquiry_title}, 
+            inquiry_content = #{inquiry_content}, 
+            updated_at = NOW()
+        WHERE inquiry_id = #{inquiry_id} AND user_id = #{user_id} AND inquiry_status = 'pending'
+    </update>
+
+    <!-- 문의사항 삭제 (답변 전까지만) -->
+    <delete id="deleteInquiry">
+        DELETE FROM inquiry 
+        WHERE inquiry_id = #{inquiry_id} AND user_id = #{user_id} AND inquiry_status = 'pending'
+    </delete>
+
+    <!-- 문의사항 상태 업데이트 -->
+    <update id="updateInquiryStatus">
+        UPDATE inquiry 
+        SET inquiry_status = #{status}, updated_at = NOW()
+        WHERE inquiry_id = #{inquiry_id}
+    </update>
+
+    <!-- 답변 여부 확인 -->
+    <select id="hasAnswer" parameterType="int" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM inquiry_answer WHERE inquiry_id = #{inquiry_id}
+    </select>
+
+    <!-- 공개용 문의사항 목록 조회 (인증 없이) -->
+    <select id="getPublicInquiryList" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        ORDER BY i.created_at DESC
+    </select>
+
+    <!-- 공개용 문의사항 상세 조회 (인증 없이) -->
+    <select id="getPublicInquiryDetail" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            i.inquiry_id,
+            i.user_id,
+            i.inquiry_title,
+            i.inquiry_content,
+            i.inquiry_status,
+            i.created_at,
+            i.updated_at,
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
+        FROM inquiry i
+        LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        WHERE i.inquiry_id = #{inquiry_id}
+    </select>
+
+    <!-- 문의사항 ID로 조회 (알림용) -->
+    <select id="getInquiryById" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryVO">
+        SELECT 
+            inquiry_id,
+            user_id,
+            inquiry_title,
+            inquiry_content,
+            inquiry_status,
+            created_at,
+            updated_at
+        FROM inquiry 
+        WHERE inquiry_id = #{inquiry_id}
+    </select>
+
+</mapper>

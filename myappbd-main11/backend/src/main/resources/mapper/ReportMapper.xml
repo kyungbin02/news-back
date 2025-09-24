@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myapp.backend.domain.report.mapper.ReportMapper">
+
+    <!-- 신고 등록 -->
+    <insert id="insertReport" parameterType="myapp.backend.domain.report.vo.ReportVO" useGeneratedKeys="true" keyProperty="report_id">
+        INSERT INTO user_report (reporter_id, reported_user_id, report_reason, report_content, target_type, target_id, report_status, created_at, updated_at)
+        VALUES (#{reporter_id}, #{reported_user_id}, #{report_reason}, #{report_content}, #{target_type}, #{target_id}, #{report_status}, NOW(), NOW())
+    </insert>
+
+    <!-- 내 신고 목록 조회 -->
+    <select id="getMyReports" parameterType="int" resultType="myapp.backend.domain.report.vo.ReportVO">
+        SELECT 
+            ur.report_id,
+            ur.reporter_id,
+            ur.reported_user_id,
+            ur.report_reason,
+            ur.report_content,
+            ur.target_type,
+            ur.target_id,
+            ur.report_status,
+            ur.admin_id,
+            ur.admin_comment,
+            ur.created_at,
+            ur.updated_at,
+            reporter.username as reporter_username,
+            reported.username as reported_username,
+            admin_u.username as admin_username
+        FROM user_report ur
+        LEFT JOIN user reporter ON ur.reporter_id = reporter.user_id
+        LEFT JOIN user reported ON ur.reported_user_id = reported.user_id
+        LEFT JOIN admin a ON ur.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        WHERE ur.reporter_id = #{reporter_id}
+        ORDER BY ur.created_at DESC
+    </select>
+
+    <!-- 신고 상세 조회 (신고된 내용 포함) -->
+    <select id="getReportDetail" parameterType="int" resultType="myapp.backend.domain.report.vo.ReportVO">
+        SELECT 
+            ur.report_id,
+            ur.reporter_id,
+            ur.reported_user_id,
+            ur.report_reason,
+            ur.report_content,
+            ur.target_type,
+            ur.target_id,
+            ur.report_status,
+            ur.admin_id,
+            ur.admin_comment,
+            ur.created_at,
+            ur.updated_at,
+            reporter.username as reporter_username,
+            reported.username as reported_username,
+            admin_u.username as admin_username,
+            b.board_content as board_content,
+            bc.comment_content as comment_content
+        FROM user_report ur
+        LEFT JOIN user reporter ON ur.reporter_id = reporter.user_id
+        LEFT JOIN user reported ON ur.reported_user_id = reported.user_id
+        LEFT JOIN admin a ON ur.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        LEFT JOIN board b ON ur.target_type = 'board' AND ur.target_id = b.board_id
+        LEFT JOIN board_comment bc ON ur.target_type = 'board_comment' AND ur.target_id = bc.comment_id
+        WHERE ur.report_id = #{report_id}
+    </select>
+
+    <!-- 관리자용 신고 목록 조회 -->
+    <select id="getAdminReportList" resultType="myapp.backend.domain.report.vo.ReportVO">
+        SELECT 
+            ur.report_id,
+            ur.reporter_id,
+            ur.reported_user_id,
+            ur.report_reason,
+            ur.report_content,
+            ur.target_type,
+            ur.target_id,
+            ur.report_status,
+            ur.admin_id,
+            ur.admin_comment,
+            ur.created_at,
+            ur.updated_at,
+            reporter.username as reporter_username,
+            reported.username as reported_username,
+            admin_u.username as admin_username
+        FROM user_report ur
+        LEFT JOIN user reporter ON ur.reporter_id = reporter.user_id
+        LEFT JOIN user reported ON ur.reported_user_id = reported.user_id
+        LEFT JOIN admin a ON ur.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
+        ORDER BY ur.created_at DESC
+    </select>
+
+    <!-- 신고 상태 업데이트 -->
+    <update id="updateReportStatus">
+        UPDATE user_report 
+        SET admin_id = #{admin_id},
+            admin_comment = #{admin_comment},
+            report_status = #{status},
+            updated_at = NOW()
+        WHERE report_id = #{report_id}
+    </update>
+
+    <!-- 사용자 제재 적용 (7일 정지) -->
+    <update id="applyUserSanction">
+        UPDATE user 
+        SET user_status = 'suspended',
+            sanction_reason = #{sanction_reason},
+            sanction_start_date = NOW(),
+            sanction_end_date = DATE_ADD(NOW(), INTERVAL #{sanction_days} DAY)
+        WHERE user_id = #{user_id}
+    </update>
+
+    <!-- 사용자 경고 적용 -->
+    <update id="applyUserWarning">
+        UPDATE user 
+        SET user_status = 'warning',
+            sanction_reason = #{sanction_reason},
+            sanction_start_date = NOW(),
+            sanction_end_date = NULL
+        WHERE user_id = #{user_id}
+    </update>
+
+</mapper>

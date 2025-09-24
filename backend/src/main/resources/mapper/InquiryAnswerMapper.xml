@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myapp.backend.domain.inquiry.mapper.InquiryAnswerMapper">
+
+    <!-- 답변 조회 (개별) -->
+    <select id="getAnswer" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryAnswerVO">
+        SELECT 
+            ia.answer_id,
+            ia.inquiry_id,
+            ia.admin_id,
+            ia.answer_content,
+            ia.created_at,
+            ia.updated_at,
+            u.username as admin_username
+        FROM inquiry_answer ia
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user u ON a.user_id = u.user_id
+        WHERE ia.answer_id = #{answer_id}
+    </select>
+
+    <!-- 답변 조회 (문의사항별) -->
+    <select id="getAnswerByInquiryId" parameterType="int" resultType="myapp.backend.domain.inquiry.vo.InquiryAnswerVO">
+        SELECT 
+            ia.answer_id,
+            ia.inquiry_id,
+            ia.admin_id,
+            ia.answer_content,
+            ia.created_at,
+            ia.updated_at,
+            u.username as admin_username
+        FROM inquiry_answer ia
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user u ON a.user_id = u.user_id
+        WHERE ia.inquiry_id = #{inquiry_id}
+    </select>
+
+    <!-- 답변 작성 -->
+    <insert id="insertAnswer" parameterType="myapp.backend.domain.inquiry.vo.InquiryAnswerVO" useGeneratedKeys="true" keyProperty="answer_id">
+        INSERT INTO inquiry_answer (inquiry_id, admin_id, answer_content, created_at, updated_at)
+        VALUES (#{inquiry_id}, #{admin_id}, #{answer_content}, NOW(), NOW())
+    </insert>
+
+    <!-- 답변 수정 -->
+    <update id="updateAnswer" parameterType="myapp.backend.domain.inquiry.vo.InquiryAnswerVO">
+        UPDATE inquiry_answer 
+        SET answer_content = #{answer_content}, 
+            updated_at = NOW()
+        WHERE answer_id = #{answer_id}
+    </update>
+
+    <!-- 답변 삭제 -->
+    <delete id="deleteAnswer" parameterType="int">
+        DELETE FROM inquiry_answer WHERE answer_id = #{answer_id}
+    </delete>
+
+</mapper>

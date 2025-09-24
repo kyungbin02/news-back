@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="myapp.backend.domain.comment.mapper.CommentMapper">
+
+    <select id="findByNewsId" resultType="myapp.backend.domain.comment.domain.Comment">
+        SELECT
+            c.comment_id AS commentId,
+            c.user_id AS userId,
+            c.news_id AS newsId,
+            c.content,
+            c.parent_id AS parentId,
+            c.created_at AS createdAt,
+            u.username AS userName,
+            (SELECT COUNT(*) FROM comments WHERE parent_id = c.comment_id) AS replyCount
+        FROM comments c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE c.news_id = #{newsId} AND c.parent_id IS NULL
+        ORDER BY c.created_at DESC
+    </select>
+
+    <select id="findRepliesByParentId" resultType="myapp.backend.domain.comment.domain.Comment">
+        SELECT
+            c.comment_id AS commentId,
+            c.user_id AS userId,
+            c.news_id AS newsId,
+            c.content,
+            c.parent_id AS parentId,
+            c.created_at AS createdAt,
+            u.username AS userName
+        FROM comments c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE c.parent_id = #{parentId}
+        ORDER BY c.created_at ASC
+    </select>
+
+    <select id="findById" resultType="myapp.backend.domain.comment.domain.Comment">
+        SELECT
+            c.comment_id AS commentId,
+            c.user_id AS userId,
+            c.news_id AS newsId,
+            c.content,
+            c.parent_id AS parentId,
+            c.created_at AS createdAt,
+            u.username AS userName
+        FROM comments c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        WHERE c.comment_id = #{commentId}
+    </select>
+
+    <insert id="insert" parameterType="myapp.backend.domain.comment.domain.Comment"
+            useGeneratedKeys="true" keyProperty="commentId">
+        INSERT INTO comments (user_id, news_id, content, parent_id, created_at)
+        VALUES (#{userId}, #{newsId}, #{content}, #{parentId}, #{createdAt})
+    </insert>
+
+    <update id="update" parameterType="myapp.backend.domain.comment.domain.Comment">
+        UPDATE comments
+        SET content = #{content}
+        WHERE comment_id = #{commentId} AND user_id = #{userId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM comments
+        WHERE comment_id = #{commentId} AND user_id = #{userId}
+    </delete>
+
+    <select id="countByNewsId" resultType="int">
+        SELECT COUNT(*)
+        FROM comments
+        WHERE news_id = #{newsId}
+    </select>
+
+    <!-- <경빈> 사용자별 댓글 조회 (뉴스 정보 포함) -->
+    <select id="findByUserIdWithNewsInfo" resultType="myapp.backend.domain.comment.domain.Comment">
+        SELECT
+            c.comment_id AS commentId,
+            c.user_id AS userId,
+            c.news_id AS newsId,
+            c.content,
+            c.parent_id AS parentId,
+            c.created_at AS createdAt,
+            u.username AS userName,
+            COALESCE(n.title, '뉴스 제목') AS newsTitle,
+            0 AS likeCount
+        FROM comments c
+        LEFT JOIN user u ON c.user_id = u.user_id
+        LEFT JOIN news n ON c.news_id = n.news_id
+        WHERE c.user_id = #{userId}
+        ORDER BY c.created_at DESC
+    </select>
+
+</mapper>
