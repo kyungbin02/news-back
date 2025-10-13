@@ -12,9 +12,15 @@
             i.inquiry_status,
             i.created_at,
             i.updated_at,
-            u.username
+            u.username,
+            ia.answer_content,
+            ia.created_at as answer_created_at,
+            admin_u.username as admin_username
         FROM inquiry i
         LEFT JOIN user u ON i.user_id = u.user_id
+        LEFT JOIN inquiry_answer ia ON i.inquiry_id = ia.inquiry_id
+        LEFT JOIN admin a ON ia.admin_id = a.admin_id
+        LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
         WHERE i.user_id = #{user_id}
         ORDER BY i.created_at DESC
     </select>

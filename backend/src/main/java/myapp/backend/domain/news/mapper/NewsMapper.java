@@ -31,7 +31,7 @@ public interface NewsMapper {
     /**
      * 제목으로 뉴스 찾기 (중복 체크용)
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news WHERE title = #{title}")
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE title = #{title}")
     News findByTitle(@Param("title") String title);
 
     // <경빈> newsId로 뉴스 존재 여부 확인 (중복 체크용)
@@ -41,31 +41,31 @@ public interface NewsMapper {
     /**
      * ID로 뉴스 찾기
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news WHERE news_id = #{newsId}")
-    News findById(@Param("newsId") int newsId);
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE news_id = #{newsId}")
+    News findById(@Param("newsId") long newsId);
 
     /**
      * 전체 뉴스 목록 조회 (페이징)
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
     List<News> findAllNews(@Param("offset") int offset, @Param("size") int size);
 
     /**
      * 카테고리별 뉴스 목록 조회 (페이징)
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news WHERE category = #{category} ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE category = #{category} ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
     List<News> findNewsByCategory(@Param("category") String category, @Param("offset") int offset, @Param("size") int size);
 
     /**
      * 최신 뉴스 조회
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news ORDER BY created_at DESC LIMIT #{limit}")
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news ORDER BY created_at DESC LIMIT #{limit}")
     List<News> findLatestNews(@Param("limit") int limit);
 
     /**
      * 인기 뉴스 조회 (조회수 기준)
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news ORDER BY views DESC, created_at DESC LIMIT #{limit}")
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news ORDER BY views DESC, created_at DESC LIMIT #{limit}")
     List<News> findPopularNews(@Param("limit") int limit);
 
     /**
@@ -77,7 +77,7 @@ public interface NewsMapper {
     /**
      * 검색 (제목, 내용 기준)
      */
-    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt FROM news WHERE title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') " +
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') " +
             "ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
     List<News> searchNews(@Param("keyword") String keyword, @Param("offset") int offset, @Param("size") int size);
 
@@ -88,14 +88,44 @@ public interface NewsMapper {
     int getTotalCount();
 
     /**
+     * URL이 null인 뉴스 조회
+     */
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE url IS NULL OR url = ''")
+    List<News> findNewsWithNullUrl();
+
+    /**
+     * URL이 null인 경우에만 업데이트
+     */
+    @Update("UPDATE news SET url = #{url}, updated_at = CURRENT_TIMESTAMP WHERE news_id = #{newsId} AND (url IS NULL OR url = '')")
+    int updateUrlIfNull(@Param("newsId") int newsId, @Param("url") String url);
+
+    /**
      * 카테고리별 뉴스 개수
      */
     @Select("SELECT COUNT(*) FROM news WHERE category = #{category}")
     int getCountByCategory(@Param("category") String category);
 
     /**
-     * 오래된 뉴스 삭제 (30일 이상)
+     * 오래된 뉴스 삭제 (10일 이상)
      */
-    @Delete("DELETE FROM news WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)")
+    @Delete("DELETE FROM news WHERE created_at < DATE_SUB(NOW(), INTERVAL 10 DAY)")
     int deleteOldNews();
+
+    /**
+     * 기존 뉴스의 source 필드 업데이트 (null인 경우에만)
+     */
+    @Update("UPDATE news SET source = #{source} WHERE news_id = #{newsId} AND source IS NULL")
+    int updateSourceIfNull(@Param("newsId") Integer newsId, @Param("source") String source);
+
+    /**
+     * source가 null인 뉴스 목록 조회
+     */
+    @Select("SELECT news_id as newsId, title, content, category, image_url as imageUrl, views, created_at as createdAt, updated_at as updatedAt, source, url, published_at as publishedAt FROM news WHERE source IS NULL")
+    List<News> findNewsWithNullSource();
+
+    /**
+     * 뉴스 카테고리 업데이트
+     */
+    @Update("UPDATE news SET category = #{category}, updated_at = CURRENT_TIMESTAMP WHERE news_id = #{newsId}")
+    int updateNewsCategory(@Param("newsId") Integer newsId, @Param("category") String category);
 }

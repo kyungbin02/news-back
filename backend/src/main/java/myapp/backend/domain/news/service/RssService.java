@@ -24,7 +24,7 @@ public interface RssService {
     /**
      * 뉴스 ID로 특정 뉴스 조회
      */
-    News getNewsById(int newsId);
+    News getNewsById(long newsId);
     
     /**
      * 뉴스 조회수 증가
@@ -40,4 +40,19 @@ public interface RssService {
      * 인기 뉴스 조회 (조회수 기준)
      */
     List<News> getPopularNews(int limit);
+
+    /**
+     * 기존 뉴스의 source 필드 업데이트 (null인 경우에만)
+     */
+    void updateNullSourceNews();
+
+    /**
+     * 기존 뉴스의 URL 필드 업데이트 (null인 경우에만)
+     */
+    void updateNullUrlNews();
+
+    /**
+     * 잘못된 형식의 동아일보 URL을 올바른 형식으로 수정
+     */
+    void fixDongaUrlFormat();
 }

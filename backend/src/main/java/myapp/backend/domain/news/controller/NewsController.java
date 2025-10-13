@@ -23,6 +23,7 @@ public class NewsController {
     @Autowired
     private RssService rssService;
     
+    
     @Autowired
     private NewsMapper newsMapper;
     
@@ -175,14 +176,14 @@ public class NewsController {
      * GET /api/news/123
      */
     @GetMapping("/{newsId}")
-    public ResponseEntity<Map<String, Object>> getNewsById(@PathVariable int newsId) {
+    public ResponseEntity<Map<String, Object>> getNewsById(@PathVariable("newsId") long newsId) {
         try {
             News news = rssService.getNewsById(newsId);
             
             Map<String, Object> response = new HashMap<>();
             if (news != null) {
                 // 조회수 증가
-                rssService.incrementViews(newsId);
+                rssService.incrementViews((int) newsId);
                 
                 response.put("success", true);
                 response.put("data", news);
@@ -227,9 +228,9 @@ public class NewsController {
      * POST /api/news/123/view
      */
     @PostMapping("/{newsId}/view")
-    public ResponseEntity<Map<String, Object>> incrementViews(@PathVariable int newsId) {
+    public ResponseEntity<Map<String, Object>> incrementViews(@PathVariable("newsId") long newsId) {
         try {
-            rssService.incrementViews(newsId);
+            rssService.incrementViews((int) newsId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -240,6 +241,28 @@ public class NewsController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "조회수 증가 실패: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 동아일보 URL 형식 수정
+     * POST /api/news/fix-donga-urls
+     */
+    @PostMapping("/fix-donga-urls")
+    public ResponseEntity<Map<String, Object>> fixDongaUrls() {
+        try {
+            rssService.fixDongaUrlFormat();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "동아일보 URL 형식 수정이 완료되었습니다.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "URL 형식 수정 실패: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
@@ -305,4 +328,112 @@ public class NewsController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+
+    /**
+     * 기존 뉴스의 source 필드 업데이트 (null인 경우에만)
+     * POST /api/news/update-source
+     */
+    @PostMapping("/update-source")
+    public ResponseEntity<Map<String, Object>> updateNullSourceNews() {
+        try {
+            System.out.println("=== 기존 뉴스 source 필드 업데이트 API 호출 ===");
+            
+            rssService.updateNullSourceNews();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "기존 뉴스의 source 필드가 업데이트되었습니다.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "source 필드 업데이트 실패: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 기존 뉴스의 URL 필드 업데이트 (null인 경우에만)
+     * POST /api/news/update-url
+     */
+    @PostMapping("/update-url")
+    public ResponseEntity<Map<String, Object>> updateNullUrlNews() {
+        try {
+            System.out.println("=== 기존 뉴스 URL 필드 업데이트 API 호출 ===");
+            
+            rssService.updateNullUrlNews();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "기존 뉴스의 URL 필드가 업데이트되었습니다.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "URL 필드 업데이트 실패: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 기존 뉴스들의 카테고리를 올바르게 업데이트 (관리자용)
+     * POST /api/news/update-categories
+     */
+    @PostMapping("/update-categories")
+    public ResponseEntity<Map<String, Object>> updateNewsCategories() {
+        try {
+            System.out.println("=== 뉴스 카테고리 업데이트 API 호출 ===");
+            
+            // RssService의 updateNewsCategories 메서드 호출
+            ((myapp.backend.domain.news.service.impl.RssServiceImpl) rssService).updateNewsCategories();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "뉴스 카테고리 업데이트가 완료되었습니다.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("뉴스 카테고리 업데이트 실패: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "뉴스 카테고리 업데이트 실패: " + e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * 카테고리별 뉴스 개수 확인 (디버깅용)
+     * GET /api/news/category-stats
+     */
+    @GetMapping("/category-stats")
+    public ResponseEntity<Map<String, Object>> getCategoryStats() {
+        try {
+            Map<String, Object> response = new HashMap<>();
+            
+            int generalCount = newsMapper.getCountByCategory("general");
+            int economyCount = newsMapper.getCountByCategory("economy");
+            int sportsCount = newsMapper.getCountByCategory("sports");
+            int techCount = newsMapper.getCountByCategory("tech");
+            
+            response.put("success", true);
+            response.put("general", generalCount);
+            response.put("economy", economyCount);
+            response.put("sports", sportsCount);
+            response.put("tech", techCount);
+            response.put("total", generalCount + economyCount + sportsCount + techCount);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "카테고리 통계 조회 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
 }

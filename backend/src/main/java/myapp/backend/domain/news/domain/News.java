@@ -16,6 +16,7 @@ public class News {
     private String source;        // RSS 출처 (예: chosun.com)
     private String url;          // 원본 링크
     private LocalDateTime publishedAt;  // RSS 발행일
+    private String summary;      // AI 요약 내용 (JSON 형태)
 
     // 기본 생성자
     public News() {}
@@ -117,6 +118,14 @@ public class News {
 
     public void setPublishedAt(LocalDateTime publishedAt) {
         this.publishedAt = publishedAt;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     @Override
