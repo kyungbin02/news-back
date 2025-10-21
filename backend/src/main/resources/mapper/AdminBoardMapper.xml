@@ -6,6 +6,7 @@
     <select id="getAdminBoardList" resultType="myapp.backend.domain.admin.adminboard.vo.AdminBoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             b.uploaded_at,
             b.view,
@@ -30,6 +31,7 @@
     <select id="getAdminBoardDetail" parameterType="int" resultType="myapp.backend.domain.admin.adminboard.vo.AdminBoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             b.uploaded_at,
             b.view,

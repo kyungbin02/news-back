@@ -59,6 +59,58 @@ public class BoardServiceImpl implements BoardService {
         try {
             // 1. 게시글 먼저 저장
             BoardVO board = new BoardVO();
+            board.setBoard_title(""); // 제목 없이 내용만 저장 (기존 방식 유지)
+            board.setBoard_content(content);
+            board.setUser_id(userId);
+            boardMapper.insertBoard(board);
+            
+            // 2. board_id가 설정되었는지 확인
+            if (board.getBoard_id() == 0) {
+                // board_id가 설정되지 않았다면 최근 생성된 게시글 조회
+                board = boardMapper.getLatestBoardByUserId(userId);
+            }
+            
+            // 3. 이미지가 있으면 처리 (여러 이미지를 쉼표로 구분해서 저장)
+            if (images != null && images.length > 0) {
+                StringBuilder allImageUrls = new StringBuilder();
+                
+                for (int i = 0; i < images.length; i++) {
+                    MultipartFile image = images[i];
+                    if (!image.isEmpty()) {
+                        // 이미지 저장
+                        ImageSaveResult result = saveImageAndConnectToBoard(image, board.getBoard_id(), i);
+                        
+                        // 모든 이미지 URL을 쉼표로 구분해서 저장
+                        if (i > 0) {
+                            allImageUrls.append(",");
+                        }
+                        allImageUrls.append(result.getImageUrl());
+                    }
+                }
+                
+                // 4. 모든 이미지 URL을 하나의 ImageVO에 저장
+                ImageVO combinedImageVO = new ImageVO();
+                combinedImageVO.setImage_url(allImageUrls.toString());
+                combinedImageVO.setImage_id(0); // MyBatis가 자동으로 설정
+                
+                boardMapper.insertImage(combinedImageVO);
+                
+                // 5. 게시글의 image_id 업데이트
+                boardMapper.updateBoardImageId(board.getBoard_id(), combinedImageVO.getImage_id());
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("게시글 작성 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    @Override
+    public void createBoardWithTitleAndImages(String title, String content, MultipartFile[] images, int userId) {
+        try {
+            // 1. 게시글 먼저 저장 (제목과 내용을 분리해서 저장)
+            BoardVO board = new BoardVO();
+            board.setBoard_title(title);
             board.setBoard_content(content);
             board.setUser_id(userId);
             boardMapper.insertBoard(board);
@@ -279,13 +331,11 @@ public class BoardServiceImpl implements BoardService {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "수정할 게시글을 찾을 수 없습니다.");
             }
             
-            // 3. 제목과 내용을 [제목] 내용 형식으로 합치기
-            String combinedContent = "[" + title + "] " + content;
-            
-            // 4. 게시글 내용 업데이트
+            // 3. 게시글 내용 업데이트 (제목과 내용을 분리해서 저장)
             BoardVO updateBoard = new BoardVO();
             updateBoard.setBoard_id(boardId);
-            updateBoard.setBoard_content(combinedContent);
+            updateBoard.setBoard_title(title);
+            updateBoard.setBoard_content(content);
             boardMapper.updateBoard(updateBoard);
             
             // 5. 이미지가 있으면 기존 이미지 삭제 후 새 이미지 업로드

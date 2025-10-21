@@ -237,6 +237,7 @@ public class NewsClickTrackingController {
                 Map<String, Object> newsItem = new HashMap<>();
                 newsItem.put("newsId", news.getNewsId());
                 newsItem.put("newsTitle", news.getNewsTitle());
+                newsItem.put("source", news.getSource());  // source 필드 추가
                 newsItem.put("clickCount", news.getClickCount());
                 newsItem.put("lastClickedAt", news.getLastClickedAt());
                 newsItem.put("newsType", "db"); // 최신뉴스 구분

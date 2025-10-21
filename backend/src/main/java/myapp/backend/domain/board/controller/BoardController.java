@@ -70,30 +70,9 @@ public class BoardController {
         }
     }
     
-    // 게시물 작성 (이미지 첨부 포함) - 인증된 사용자만
+    // 게시물 작성 (제목 + 내용 + 이미지 첨부) - 인증된 사용자만
     @PostMapping("board/insert")
     public ResponseEntity<?> createBoard(
-            @RequestParam("content") String content,
-            @RequestParam(value = "images", required = false) MultipartFile[] images,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        
-        // 인증된 사용자만 게시글 작성 가능
-        if (principal == null) {
-            return ResponseEntity.status(401).body("로그인이 필요합니다.");
-        }
-        
-        try {
-            int userId = principal.getUserId();
-            boardService.createBoardWithImages(content, images, userId);
-            return ResponseEntity.ok().body("게시글이 성공적으로 작성되었습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("게시글 작성에 실패했습니다: " + e.getMessage());
-        }
-    }
-    
-    // 게시물 작성 (제목 + 내용 + 이미지 첨부) - 인증된 사용자만
-    @PostMapping("board/insert-with-title")
-    public ResponseEntity<?> createBoardWithTitle(
             @RequestParam("title") String title,
             @RequestParam("content") String content,
             @RequestParam(value = "images", required = false) MultipartFile[] images,
@@ -106,14 +85,13 @@ public class BoardController {
         
         try {
             int userId = principal.getUserId();
-            // [제목] 내용 형식으로 합치기
-            String combinedContent = "[" + title + "] " + content;
-            boardService.createBoardWithImages(combinedContent, images, userId);
+            boardService.createBoardWithTitleAndImages(title, content, images, userId);
             return ResponseEntity.ok().body("게시글이 성공적으로 작성되었습니다.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("게시글 작성에 실패했습니다: " + e.getMessage());
         }
     }
+    
     
     // 개별 글 조회
     @GetMapping("board/{board_id}")

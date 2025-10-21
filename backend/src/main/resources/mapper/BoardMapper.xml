@@ -6,6 +6,7 @@
     <select id="getBoardList" resultType="myapp.backend.domain.board.vo.BoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             b.uploaded_at,
             b.user_id,
@@ -28,6 +29,7 @@
     <select id="getBoardById" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             b.uploaded_at,
             b.user_id,
@@ -49,6 +51,7 @@
     <!-- 게시글 작성 (동적 쿼리) -->
     <insert id="insertBoard" parameterType="myapp.backend.domain.board.vo.BoardVO" useGeneratedKeys="true" keyProperty="board_id">
         INSERT INTO board (
+            board_title,
             board_content,
             user_id,
             uploaded_at,
@@ -57,6 +60,7 @@
                 , image_id
             </if>
         ) VALUES (
+            #{board_title},
             #{board_content},
             #{user_id},
             NOW(),
@@ -78,6 +82,7 @@
     <select id="getBoardDetailById" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             i.image_url,
             b.uploaded_at,
@@ -137,6 +142,7 @@
     <update id="updateBoard" parameterType="myapp.backend.domain.board.vo.BoardVO">
         UPDATE board
         <set>
+            <if test="board_title != null">board_title = #{board_title},</if>
             <if test="board_content != null">board_content = #{board_content},</if>
             <if test="image_id != null and image_id != 0">image_id = #{image_id},</if>
         </set>
@@ -167,6 +173,7 @@
     <select id="getBoardListWithLikeStatus" parameterType="int" resultType="myapp.backend.domain.board.vo.BoardVO">
         SELECT 
             b.board_id,
+            b.board_title,
             b.board_content,
             b.uploaded_at,
             b.user_id,

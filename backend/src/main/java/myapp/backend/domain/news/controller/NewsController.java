@@ -6,6 +6,9 @@ import myapp.backend.domain.news.mapper.NewsMapper;
 import myapp.backend.domain.search.service.SearchTrackingService;
 import myapp.backend.domain.search.service.NewsClickTrackingService;
 import myapp.backend.domain.search.domain.NewsClickTracking;
+import myapp.backend.domain.mynews.service.ViewHistoryService;
+import myapp.backend.domain.auth.vo.UserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +35,9 @@ public class NewsController {
     
     @Autowired
     private NewsClickTrackingService newsClickTrackingService;
+    
+    @Autowired
+    private ViewHistoryService viewHistoryService;
 
     // <경빈> RSS 뉴스 저장 API
     @PostMapping
@@ -115,23 +121,38 @@ public class NewsController {
     }
 
     /**
-     * 전체 뉴스 목록 조회
+     * 전체 뉴스 목록 조회 (카테고리 필터링 지원)
      * GET /api/news?page=1&size=20
+     * GET /api/news?category=sports&page=1&size=20
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllNews(
+            @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         
         try {
-            List<News> newsList = rssService.getAllNews(page, size);
+            List<News> newsList;
+            
+            // 카테고리가 지정된 경우 해당 카테고리 뉴스만 조회
+            if (category != null && !category.trim().isEmpty()) {
+                newsList = rssService.getNewsByCategory(category, page, size);
+            } else {
+                // 카테고리가 없는 경우 전체 뉴스 조회
+                newsList = rssService.getAllNews(page, size);
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", newsList);
-            response.put("page", page);
-            response.put("size", size);
-            response.put("total", newsList.size());
+            response.put("totalCount", newsList.size());
+            response.put("currentPage", page);
+            response.put("totalPages", (int) Math.ceil(newsList.size() / (double) size));
+            
+            // 카테고리가 지정된 경우 카테고리 정보도 포함
+            if (category != null) {
+                response.put("category", category);
+            }
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -176,7 +197,9 @@ public class NewsController {
      * GET /api/news/123
      */
     @GetMapping("/{newsId}")
-    public ResponseEntity<Map<String, Object>> getNewsById(@PathVariable("newsId") long newsId) {
+    public ResponseEntity<Map<String, Object>> getNewsById(
+            @PathVariable("newsId") long newsId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
         try {
             News news = rssService.getNewsById(newsId);
             
@@ -184,6 +207,18 @@ public class NewsController {
             if (news != null) {
                 // 조회수 증가
                 rssService.incrementViews((int) newsId);
+                
+                // 로그인한 사용자의 경우 열람기록 저장
+                if (userPrincipal != null) {
+                    try {
+                        Integer userId = userPrincipal.getUserId();
+                        viewHistoryService.addViewHistory(userId, (int) newsId);
+                        System.out.println("열람기록 저장 성공: userId=" + userId + ", newsId=" + newsId);
+                    } catch (Exception e) {
+                        System.out.println("열람기록 저장 실패: " + e.getMessage());
+                        // 열람기록 저장 실패해도 뉴스 조회는 계속 진행
+                    }
+                }
                 
                 response.put("success", true);
                 response.put("data", news);

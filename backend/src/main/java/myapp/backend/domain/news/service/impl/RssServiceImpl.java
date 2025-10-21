@@ -1,4 +1,4 @@
-package myapp.backend.domain.news.service.impl;
+ package myapp.backend.domain.news.service.impl;
 
 import myapp.backend.domain.news.domain.News;
 import myapp.backend.domain.news.mapper.NewsMapper;
@@ -22,9 +22,12 @@ import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jsoup.Jsoup;
 
 @Service
 public class RssServiceImpl implements RssService {
@@ -33,6 +36,9 @@ public class RssServiceImpl implements RssService {
     private NewsMapper newsMapper;
 
     private final RestTemplate restTemplate;
+    
+    // 크롤링 결과 캐시 (URL -> Content)
+    private final Map<String, String> contentCache = new ConcurrentHashMap<>();
     
     public RssServiceImpl() {
         this.restTemplate = new RestTemplate();
@@ -209,8 +215,28 @@ public class RssServiceImpl implements RssService {
         // RSS URL에서 출처명 추출
         String source = determineSourceFromUrl(rssUrl);
         
+        // 원문 크롤링 시도
+        String fullContent = null;
+        if (url != null && !url.trim().isEmpty()) {
+            fullContent = crawlFullContent(url);
+        }
+        
+        // 최종 콘텐츠 결정: 원문 우선, 실패 시 RSS 요약 사용
+        String finalContent = description; // 기본값은 RSS 요약
+        if (fullContent != null && !fullContent.trim().isEmpty()) {
+            // 원문이 RSS 요약보다 길면 원문 사용
+            if (fullContent.length() > description.length()) {
+                finalContent = fullContent;
+                System.out.println("원문 사용: " + fullContent.length() + "자 (RSS 요약: " + description.length() + "자)");
+            } else {
+                System.out.println("RSS 요약 사용: 원문이 너무 짧음 (" + fullContent.length() + "자)");
+            }
+        } else {
+            System.out.println("RSS 요약 사용: 원문 크롤링 실패");
+        }
+        
         news.setTitle(title);
-        news.setContent(description);  // content에 description 저장
+        news.setContent(finalContent);  // 원문 또는 RSS 요약
         news.setCategory(category);
         news.setImageUrl(imageUrl);
         news.setViews(0);
@@ -378,6 +404,232 @@ public class RssServiceImpl implements RssService {
             System.err.println("RSS item 이미지 추출 실패: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 기사 원문 크롤링
+     * RSS 요약 대신 실제 기사 페이지에서 본문 내용을 추출
+     * 캐싱과 지연 처리를 통한 성능 최적화 포함
+     */
+    private String crawlFullContent(String articleUrl) {
+        if (articleUrl == null || articleUrl.trim().isEmpty()) {
+            return null;
+        }
+
+        // 캐시에서 먼저 확인
+        if (contentCache.containsKey(articleUrl)) {
+            System.out.println("캐시에서 원문 반환: " + articleUrl);
+            return contentCache.get(articleUrl);
+        }
+
+        try {
+            System.out.println("원문 크롤링 시도: " + articleUrl);
+            
+            // 서버 부하 방지를 위한 지연 처리
+            Thread.sleep(500); // 0.5초 대기
+            
+            // 웹페이지 크롤링
+            org.jsoup.nodes.Document doc = Jsoup.connect(articleUrl)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                .timeout(10000)
+                .followRedirects(true)
+                .get();
+            
+            // 언론사별 본문 선택자 시도
+            String fullContent = extractContentBySource(articleUrl, doc);
+            
+            if (fullContent != null && !fullContent.trim().isEmpty()) {
+                System.out.println("원문 크롤링 성공: " + fullContent.length() + "자");
+                
+                // 캐시에 저장 (최대 1000개까지만)
+                if (contentCache.size() < 1000) {
+                    contentCache.put(articleUrl, fullContent.trim());
+                }
+                
+                return fullContent.trim();
+            } else {
+                System.out.println("원문 크롤링 실패: 본문을 찾을 수 없음");
+                return null;
+            }
+            
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("크롤링 지연 처리 중단: " + articleUrl);
+            return null;
+        } catch (Exception e) {
+            System.err.println("원문 크롤링 실패: " + articleUrl + " - " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 언론사별 본문 추출
+     */
+    private String extractContentBySource(String articleUrl, org.jsoup.nodes.Document doc) {
+        // 동아일보
+        if (articleUrl.contains("donga.com")) {
+            return extractDongaContent(doc);
+        }
+        
+        // 중앙일보
+        if (articleUrl.contains("joins.com")) {
+            return extractJoinsContent(doc);
+        }
+        
+        // 기타 언론사 - 범용 선택자 시도
+        return extractGenericContent(doc);
+    }
+
+    /**
+     * 동아일보 본문 추출
+     */
+    private String extractDongaContent(org.jsoup.nodes.Document doc) {
+        String[] selectors = {
+            ".article_txt",           // 동아일보 기본 본문
+            ".news_view",             // 동아일보 뉴스 뷰
+            ".article-body",          // 동아일보 기사 본문
+            ".article_content",       // 동아일보 기사 내용
+            ".news_content"           // 동아일보 뉴스 내용
+        };
+        
+        for (String selector : selectors) {
+            org.jsoup.nodes.Element contentElement = doc.selectFirst(selector);
+            if (contentElement != null) {
+                // 불필요한 요소 제거
+                contentElement.select("script").remove();      // 스크립트 제거
+                contentElement.select("style").remove();       // 스타일 제거
+                contentElement.select(".ad").remove();         // 광고 제거
+                contentElement.select(".advertisement").remove(); // 광고 제거
+                contentElement.select(".ad-banner").remove();  // 광고 배너 제거
+                contentElement.select(".ad-box").remove();     // 광고 박스 제거
+                contentElement.select("[class*='ad-']").remove(); // ad-로 시작하는 클래스 제거
+                contentElement.select("[id*='ad-']").remove();    // ad-로 시작하는 id 제거
+                contentElement.select("iframe").remove();      // iframe 제거
+                
+                // 빈 태그 제거
+                contentElement.select("div:empty").remove();   // 빈 div 제거
+                contentElement.select("p:empty").remove();     // 빈 p 제거
+                contentElement.select("span:empty").remove();  // 빈 span 제거
+                
+                // HTML 형태로 추출하여 문단 구분 유지
+                String content = contentElement.html().trim();
+                
+                // 연속된 줄바꿈 정리 (3개 이상 → 2개로)
+                content = content.replaceAll("(<br\\s*/?>\\\n?\\s*){3,}", "<br><br>");
+                content = content.replaceAll("\\s{2,}", " ");  // 연속 공백 정리
+                
+                if (content.length() > 100) { // 최소 100자 이상
+                    System.out.println("동아일보 본문 추출 성공: " + selector + " (" + content.length() + "자)");
+                    return content;
+                }
+            }
+        }
+        
+        System.out.println("동아일보 본문 추출 실패");
+        return null;
+    }
+
+    /**
+     * 중앙일보 본문 추출
+     */
+    private String extractJoinsContent(org.jsoup.nodes.Document doc) {
+        String[] selectors = {
+            ".ab_photo",              // 중앙일보 기본 본문
+            ".article_body",          // 중앙일보 기사 본문
+            ".article-content",       // 중앙일보 기사 내용
+            ".news_content",          // 중앙일보 뉴스 내용
+            ".article_text"           // 중앙일보 기사 텍스트
+        };
+        
+        for (String selector : selectors) {
+            org.jsoup.nodes.Element contentElement = doc.selectFirst(selector);
+            if (contentElement != null) {
+                // 불필요한 요소 제거
+                contentElement.select("script").remove();      // 스크립트 제거
+                contentElement.select("style").remove();       // 스타일 제거
+                contentElement.select(".ad").remove();         // 광고 제거
+                contentElement.select(".advertisement").remove(); // 광고 제거
+                contentElement.select(".ad-banner").remove();  // 광고 배너 제거
+                contentElement.select(".ad-box").remove();     // 광고 박스 제거
+                contentElement.select("[class*='ad-']").remove(); // ad-로 시작하는 클래스 제거
+                contentElement.select("[id*='ad-']").remove();    // ad-로 시작하는 id 제거
+                contentElement.select("iframe").remove();      // iframe 제거
+                
+                // 빈 태그 제거
+                contentElement.select("div:empty").remove();   // 빈 div 제거
+                contentElement.select("p:empty").remove();     // 빈 p 제거
+                contentElement.select("span:empty").remove();  // 빈 span 제거
+                
+                // HTML 형태로 추출하여 문단 구분 유지
+                String content = contentElement.html().trim();
+                
+                // 연속된 줄바꿈 정리 (3개 이상 → 2개로)
+                content = content.replaceAll("(<br\\s*/?>\\\n?\\s*){3,}", "<br><br>");
+                content = content.replaceAll("\\s{2,}", " ");  // 연속 공백 정리
+                
+                if (content.length() > 100) { // 최소 100자 이상
+                    System.out.println("중앙일보 본문 추출 성공: " + selector + " (" + content.length() + "자)");
+                    return content;
+                }
+            }
+        }
+        
+        System.out.println("중앙일보 본문 추출 실패");
+        return null;
+    }
+
+    /**
+     * 범용 본문 추출 (기타 언론사)
+     */
+    private String extractGenericContent(org.jsoup.nodes.Document doc) {
+        String[] selectors = {
+            ".article-content",       // 일반적인 기사 내용
+            ".article-body",         // 일반적인 기사 본문
+            ".news-content",         // 일반적인 뉴스 내용
+            ".content",              // 일반적인 내용
+            ".article-text",         // 일반적인 기사 텍스트
+            ".news-text",            // 일반적인 뉴스 텍스트
+            ".post-content",         // 일반적인 포스트 내용
+            ".entry-content",        // 일반적인 엔트리 내용
+            "article",               // HTML5 article 태그
+            ".main-content"          // 일반적인 메인 내용
+        };
+        
+        for (String selector : selectors) {
+            org.jsoup.nodes.Element contentElement = doc.selectFirst(selector);
+            if (contentElement != null) {
+                // 불필요한 요소 제거
+                contentElement.select("script").remove();      // 스크립트 제거
+                contentElement.select("style").remove();       // 스타일 제거
+                contentElement.select(".ad").remove();         // 광고 제거
+                contentElement.select(".advertisement").remove(); // 광고 제거
+                contentElement.select(".ad-banner").remove();  // 광고 배너 제거
+                contentElement.select(".ad-box").remove();     // 광고 박스 제거
+                contentElement.select("[class*='ad-']").remove(); // ad-로 시작하는 클래스 제거
+                contentElement.select("[id*='ad-']").remove();    // ad-로 시작하는 id 제거
+                contentElement.select("iframe").remove();      // iframe 제거
+                
+                // 빈 태그 제거
+                contentElement.select("div:empty").remove();   // 빈 div 제거
+                contentElement.select("p:empty").remove();     // 빈 p 제거
+                contentElement.select("span:empty").remove();  // 빈 span 제거
+                
+                // HTML 형태로 추출하여 문단 구분 유지
+                String content = contentElement.html().trim();
+                
+                // 연속된 줄바꿈 정리 (3개 이상 → 2개로)
+                content = content.replaceAll("(<br\\s*/?>\\\n?\\s*){3,}", "<br><br>");
+                content = content.replaceAll("\\s{2,}", " ");  // 연속 공백 정리
+                
+                if (content.length() > 100) { // 최소 100자 이상
+                    System.out.println("범용 본문 추출 성공: " + selector + " (" + content.length() + "자)");
+                    return content;
+                }
+            }
+        }
+        
+        System.out.println("범용 본문 추출 실패");
+        return null;
     }
 
     @Override

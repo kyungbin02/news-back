@@ -25,37 +25,45 @@ public interface NewsClickTrackingMapper {
     /**
      * 뉴스 ID로 클릭 추적 정보 조회
      */
-    @Select("SELECT click_id as clickId, news_id as newsId, news_title as newsTitle, " +
-            "click_count as clickCount, last_clicked_at as lastClickedAt, " +
-            "created_at as createdAt, updated_at as updatedAt " +
-            "FROM news_click_tracking WHERE news_id = #{newsId}")
+    @Select("SELECT nct.click_id as clickId, nct.news_id as newsId, nct.news_title as newsTitle, " +
+            "n.source, nct.click_count as clickCount, nct.last_clicked_at as lastClickedAt, " +
+            "nct.created_at as createdAt, nct.updated_at as updatedAt " +
+            "FROM news_click_tracking nct " +
+            "LEFT JOIN news n ON nct.news_id = n.news_id " +
+            "WHERE nct.news_id = #{newsId}")
     NewsClickTracking findByNewsId(@Param("newsId") Integer newsId);
 
     /**
-     * 인기 뉴스 조회 (클릭 횟수 기준 상위 N개)
+     * 인기 뉴스 조회 (클릭 횟수 기준 상위 N개) - 삭제된 뉴스 제외
      */
-    @Select("SELECT click_id as clickId, news_id as newsId, news_title as newsTitle, " +
-            "click_count as clickCount, last_clicked_at as lastClickedAt, " +
-            "created_at as createdAt, updated_at as updatedAt " +
-            "FROM news_click_tracking ORDER BY click_count DESC, last_clicked_at DESC LIMIT #{limit}")
+    @Select("SELECT nct.click_id as clickId, nct.news_id as newsId, nct.news_title as newsTitle, " +
+            "n.source, nct.click_count as clickCount, nct.last_clicked_at as lastClickedAt, " +
+            "nct.created_at as createdAt, nct.updated_at as updatedAt " +
+            "FROM news_click_tracking nct " +
+            "INNER JOIN news n ON nct.news_id = n.news_id " +
+            "ORDER BY nct.click_count DESC, nct.last_clicked_at DESC LIMIT #{limit}")
     List<NewsClickTracking> findTopClickedNews(@Param("limit") int limit);
 
     /**
-     * 최근 클릭된 뉴스 조회
+     * 최근 클릭된 뉴스 조회 - 삭제된 뉴스 제외
      */
-    @Select("SELECT click_id as clickId, news_id as newsId, news_title as newsTitle, " +
-            "click_count as clickCount, last_clicked_at as lastClickedAt, " +
-            "created_at as createdAt, updated_at as updatedAt " +
-            "FROM news_click_tracking ORDER BY last_clicked_at DESC LIMIT #{limit}")
+    @Select("SELECT nct.click_id as clickId, nct.news_id as newsId, nct.news_title as newsTitle, " +
+            "n.source, nct.click_count as clickCount, nct.last_clicked_at as lastClickedAt, " +
+            "nct.created_at as createdAt, nct.updated_at as updatedAt " +
+            "FROM news_click_tracking nct " +
+            "INNER JOIN news n ON nct.news_id = n.news_id " +
+            "ORDER BY nct.last_clicked_at DESC LIMIT #{limit}")
     List<NewsClickTracking> findRecentClickedNews(@Param("limit") int limit);
 
     /**
-     * 전체 클릭 추적 목록 조회 (페이징)
+     * 전체 클릭 추적 목록 조회 (페이징) - 삭제된 뉴스 제외
      */
-    @Select("SELECT click_id as clickId, news_id as newsId, news_title as newsTitle, " +
-            "click_count as clickCount, last_clicked_at as lastClickedAt, " +
-            "created_at as createdAt, updated_at as updatedAt " +
-            "FROM news_click_tracking ORDER BY click_count DESC LIMIT #{size} OFFSET #{offset}")
+    @Select("SELECT nct.click_id as clickId, nct.news_id as newsId, nct.news_title as newsTitle, " +
+            "n.source, nct.click_count as clickCount, nct.last_clicked_at as lastClickedAt, " +
+            "nct.created_at as createdAt, nct.updated_at as updatedAt " +
+            "FROM news_click_tracking nct " +
+            "INNER JOIN news n ON nct.news_id = n.news_id " +
+            "ORDER BY nct.click_count DESC LIMIT #{size} OFFSET #{offset}")
     List<NewsClickTracking> findAllNewsClickTracking(@Param("offset") int offset, @Param("size") int size);
 
     /**

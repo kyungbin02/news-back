@@ -6,6 +6,7 @@ public class NewsClickTracking {
     private Integer clickId;
     private Integer newsId;
     private String newsTitle;
+    private String source;  // 뉴스 출처 추가
     private Integer clickCount;
     private LocalDateTime lastClickedAt;
     private LocalDateTime createdAt;
@@ -46,6 +47,14 @@ public class NewsClickTracking {
         this.newsTitle = newsTitle;
     }
 
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
     public Integer getClickCount() {
         return clickCount;
     }
@@ -84,6 +93,7 @@ public class NewsClickTracking {
                 "clickId=" + clickId +
                 ", newsId=" + newsId +
                 ", newsTitle='" + newsTitle + '\'' +
+                ", source='" + source + '\'' +
                 ", clickCount=" + clickCount +
                 ", lastClickedAt=" + lastClickedAt +
                 '}';

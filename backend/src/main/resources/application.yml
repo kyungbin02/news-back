@@ -80,3 +80,13 @@ server:
 jwt:
   secret: myapp-jwt-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
   expiration: 86400000  # 24시간 (밀리초)
+
+# Gemini AI API 설정
+gemini:
+  api:
+    key: AIzaSyC9nv3TxsxA1Xy-QwLxxwDYG-4s9TbRUYE  # 직접 설정
+
+servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
