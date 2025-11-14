@@ -51,8 +51,8 @@ public class SecurityConfig {
                 .requestMatchers("/favicon.ico", "/robots.txt", "/sitemap.xml").permitAll()
                 // 이미지 조회 API는 가장 먼저 허용 (인증 없이) - 최우선 처리
                 .requestMatchers("/api/board/image/**").permitAll()
-                // 정적 리소스 허용
-                .requestMatchers("/upload/**", "/static/**", "/resources/**", "/css/**", "/js/**", "/images/**", "/image/**").permitAll()
+                // 정적 리소스 허용 (index.html 포함)
+                .requestMatchers("/upload/**", "/static/**", "/resources/**", "/css/**", "/js/**", "/images/**", "/image/**", "/index.html").permitAll()
                 // 리소스 및 OAuth 로그인 관련 경로는 모두 허용
                 .requestMatchers("/", "/api/auth/**", "/login/oauth2/**").permitAll()
                 
@@ -128,7 +128,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));  // 프론트 주소
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3000",  // 로컬 개발
+            "https://www.newsgo.site"  // 프로덕션 프론트엔드
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));  // 모든 헤더 허용
         configuration.setAllowCredentials(true);  // 쿠키, 인증정보 허용

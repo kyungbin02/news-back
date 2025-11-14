@@ -8,6 +8,7 @@ import myapp.backend.domain.auth.service.JwtService;
 import myapp.backend.domain.auth.vo.UserVO;
 import myapp.backend.domain.admin.admin.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -32,6 +33,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     @Autowired
     private AdminService adminService;
+
+    @Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -79,12 +83,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
             if (user == null || user.getUser_id() == 0) {
                 logger.error("로그인 후 사용자 정보를 찾거나 ID를 가져올 수 없습니다. user=" + user);
-                getRedirectStrategy().sendRedirect(request, response, "http://localhost:3000/login?error=user_processing_failed");
+                getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/login?error=user_processing_failed");
                 return;
             }
         } catch (Exception e) {
             logger.error("데이터베이스 연결 또는 사용자 조회 중 오류 발생: " + e.getMessage(), e);
-            getRedirectStrategy().sendRedirect(request, response, "http://localhost:3000/login?error=database_error");
+            getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/login?error=database_error");
             return;
         }
 
@@ -104,7 +108,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                         try {
                             String encodedReason = URLEncoder.encode(user.getSanction_reason(), StandardCharsets.UTF_8);
                             String encodedEndDate = URLEncoder.encode(user.getSanction_end_date(), StandardCharsets.UTF_8);
-                            String errorUrl = UriComponentsBuilder.fromUriString("http://localhost:3000")
+                            String errorUrl = UriComponentsBuilder.fromUriString(frontendUrl)
                                 .queryParam("error", "account_suspended")
                                 .queryParam("reason", encodedReason)
                                 .queryParam("endDate", encodedEndDate)
@@ -114,7 +118,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                             return;
                         } catch (Exception e) {
                             logger.error("정지 사용자 리다이렉트 실패: " + e.getMessage(), e);
-                            response.sendRedirect("http://localhost:3000/login?error=suspended_redirect_failed");
+                            response.sendRedirect(frontendUrl + "/login?error=suspended_redirect_failed");
                             return;
                         }
                     } else {
@@ -134,7 +138,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                     boolean isAdmin = adminService.isAdmin(user.getUser_id());
                     String jwtToken = jwtService.generateToken(user, isAdmin);
                     String encodedReason = URLEncoder.encode(user.getSanction_reason(), StandardCharsets.UTF_8);
-                    String warningUrl = UriComponentsBuilder.fromUriString("http://localhost:3000")
+                    String warningUrl = UriComponentsBuilder.fromUriString(frontendUrl)
                         .queryParam("warning", "true")
                         .queryParam("reason", encodedReason)
                         .queryParam("token", jwtToken)  // JWT 토큰도 함께 전달
@@ -146,7 +150,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                     return;
                 } catch (Exception e) {
                     logger.error("경고 사용자 리다이렉트 실패: " + e.getMessage(), e);
-                    response.sendRedirect("http://localhost:3000/login?error=warning_redirect_failed");
+                    response.sendRedirect(frontendUrl + "/login?error=warning_redirect_failed");
                     return;
                 }
             }
@@ -157,7 +161,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             String jwtToken = jwtService.generateToken(user, isAdmin);
             logger.info("JWT 토큰 생성 성공 (isAdmin: " + isAdmin + ")");
             
-            String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/")
+            String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/")
                     .queryParam("token", jwtToken)
                     .build().toUriString();
             
@@ -169,7 +173,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             response.sendRedirect(targetUrl);
         } catch (Exception e) {
             logger.error("JWT 토큰 생성 또는 리다이렉션 중 오류 발생: " + e.getMessage(), e);
-            response.sendRedirect("http://localhost:3000/login?error=jwt_generation_failed");
+            response.sendRedirect(frontendUrl + "/login?error=jwt_generation_failed");
         }
     }
 }

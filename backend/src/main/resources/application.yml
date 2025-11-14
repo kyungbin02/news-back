@@ -1,4 +1,9 @@
+# dev 프로필 전용 설정 (로컬 개발용)
 spring:
+  config:
+    activate:
+      on-profile: dev
+  
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/myapp?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
@@ -62,6 +67,11 @@ spring:
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: sub
+  
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
@@ -81,12 +91,10 @@ jwt:
   secret: myapp-jwt-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
   expiration: 86400000  # 24시간 (밀리초)
 
-# Gemini AI API 설정
+# 프론트엔드 URL 설정 (로컬 개발용)
+frontend:
+  url: http://localhost:3000
+
 gemini:
   api:
     key: AIzaSyC9nv3TxsxA1Xy-QwLxxwDYG-4s9TbRUYE  # 직접 설정
-
-servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
