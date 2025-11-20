@@ -6,6 +6,7 @@ import myapp.backend.domain.report.vo.ReportRequest;
 import myapp.backend.domain.report.vo.SanctionRequest;
 import myapp.backend.domain.auth.vo.UserPrincipal;
 import myapp.backend.domain.admin.admin.service.AdminService;
+import myapp.backend.domain.board.mapper.BoardMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,9 @@ public class ReportController {
     @Autowired
     private AdminService adminService;
     
+    @Autowired
+    private BoardMapper boardMapper;
+    
     // 사용자 신고하기
     @PostMapping("/user")
     public ResponseEntity<?> reportUser(
@@ -38,10 +42,6 @@ public class ReportController {
             }
             
             // 필수 필드 검증
-            if (request.getReported_user_id() == 0) {
-                System.out.println("[ReportController] 신고 대상 사용자 ID 누락");
-                return ResponseEntity.badRequest().body("신고 대상 사용자 ID가 필요합니다.");
-            }
             if (request.getReport_reason() == null || request.getReport_reason().trim().isEmpty()) {
                 System.out.println("[ReportController] 신고 사유 누락");
                 return ResponseEntity.badRequest().body("신고 사유를 입력해주세요.");
@@ -49,6 +49,22 @@ public class ReportController {
             if (request.getTarget_type() == null || request.getTarget_type().trim().isEmpty()) {
                 System.out.println("[ReportController] 신고 대상 타입 누락");
                 return ResponseEntity.badRequest().body("신고 대상 타입이 필요합니다.");
+            }
+            
+            // reported_user_id가 0인 경우, 게시글 ID로 작성자 ID 조회
+            if (request.getReported_user_id() == 0) {
+                if ("board".equals(request.getTarget_type()) && request.getTarget_id() != null) {
+                    Integer authorUserId = boardMapper.findAuthorUserId(request.getTarget_id());
+                    if (authorUserId == null) {
+                        System.out.println("[ReportController] 게시글을 찾을 수 없음 - board_id: " + request.getTarget_id());
+                        return ResponseEntity.badRequest().body("게시글을 찾을 수 없습니다.");
+                    }
+                    request.setReported_user_id(authorUserId);
+                    System.out.println("[ReportController] 게시글 ID로 작성자 ID 조회: " + authorUserId);
+                } else {
+                    System.out.println("[ReportController] 신고 대상 사용자 ID 누락");
+                    return ResponseEntity.badRequest().body("신고 대상 사용자 ID가 필요합니다.");
+                }
             }
             
             reportService.reportUser(request, principal.getUserId());

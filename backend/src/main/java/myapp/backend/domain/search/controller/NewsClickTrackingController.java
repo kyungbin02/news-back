@@ -21,7 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/news-click")
-@CrossOrigin(origins = "http://localhost:3000") // Next.js 프론트엔드 허용
+// CORS는 SecurityConfig에서 전역으로 설정되어 있으므로 @CrossOrigin 제거
 public class NewsClickTrackingController {
 
     @Autowired

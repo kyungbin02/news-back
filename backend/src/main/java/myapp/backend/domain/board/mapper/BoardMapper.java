@@ -31,8 +31,8 @@ public interface BoardMapper {
     
     // 좋아요 관련 메서드
     void insertBoardLike(BoardLikeVO boardLike); // 좋아요 추가
-    void deleteBoardLike(int user_id, int board_id); // 좋아요 취소
-    boolean existsBoardLike(int user_id, int board_id); // 좋아요 존재 여부 확인
+    void deleteBoardLike(@Param("user_id") int user_id, @Param("board_id") int board_id); // 좋아요 취소
+    boolean existsBoardLike(@Param("user_id") int user_id, @Param("board_id") int board_id); // 좋아요 존재 여부 확인
     int getBoardLikeCount(int board_id); // 게시글 좋아요 수 조회
     
     // 인증된 사용자를 위한 게시글 목록 조회 (좋아요 상태 포함)

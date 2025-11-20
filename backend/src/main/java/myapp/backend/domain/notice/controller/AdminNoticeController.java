@@ -57,8 +57,7 @@ public class AdminNoticeController {
             System.out.println("🔍 AdminNoticeController.createNotice 호출됨");
             System.out.println("👤 Principal: " + principal);
             System.out.println("📝 Request Body: " + notice);
-            System.out.println("🔍 is_important 값 확인: " + notice.isIs_important());
-            System.out.println("🔍 is_important 타입: " + (notice.isIs_important() ? "true" : "false"));
+            System.out.println("🔍 is_important 값 확인: " + notice.getIs_important());
             
             // TODO: 관리자 권한 확인 로직 추가
             if (principal != null) {

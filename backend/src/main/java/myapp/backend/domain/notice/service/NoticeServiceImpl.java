@@ -62,8 +62,7 @@ public class NoticeServiceImpl implements NoticeService {
         try {
             System.out.println("🔍 NoticeServiceImpl.createNotice 호출됨");
             System.out.println("📝 입력 데이터: " + notice);
-            System.out.println("🔍 is_important 값: " + notice.isIs_important());
-            System.out.println("🔍 is_important 타입: " + (notice.isIs_important() ? "true" : "false"));
+            System.out.println("🔍 is_important 값: " + notice.getIs_important());
             noticeMapper.insertNotice(notice);
             System.out.println("✅ 공지사항 작성 성공");
         } catch (Exception e) {

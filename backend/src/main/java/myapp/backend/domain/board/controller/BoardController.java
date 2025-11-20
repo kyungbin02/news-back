@@ -94,7 +94,7 @@ public class BoardController {
     
     
     // 개별 글 조회
-    @GetMapping("board/{board_id}")
+    @GetMapping("/board/{board_id}")
     public BoardVO getBoard(@PathVariable("board_id") int board_id) {
         return boardService.getBoard(board_id);
     }
@@ -106,7 +106,7 @@ public class BoardController {
     }
 
     // 게시물 상세페이지 (디테일)
-    @GetMapping("board/detail/{board_id}")
+    @GetMapping("/board/detail/{board_id}")
     public BoardVO getBoardDetail(
             @PathVariable("board_id") int board_id,
             @RequestParam(value = "currentUserId", required = false) Integer currentUserId) {
@@ -164,19 +164,28 @@ public class BoardController {
     @GetMapping("/image/{filename}")
     public ResponseEntity<Resource> getImage(@PathVariable("filename") String filename) {
         try {
-            // 이미지 파일 경로 설정 (여러 경로 시도)
-            String[] possiblePaths = {
-                System.getProperty("user.dir") + "/src/main/resources/static/upload/",
-                System.getProperty("user.dir") + "/build/resources/main/static/upload/",
-                "src/main/resources/static/upload/",
-                "build/resources/main/static/upload/",
-                // 현재 디렉토리 기준 경로 추가
-                System.getProperty("user.dir") + "/backend/src/main/resources/static/upload/",
-                System.getProperty("user.dir") + "/backend/build/resources/main/static/upload/",
-                // 정확한 경로 추가
-                "/Users/munmin-won/Desktop/myappbd/backend/src/main/resources/static/upload/",
-                "/Users/munmin-won/Desktop/myappbd/backend/build/resources/main/static/upload/"
-            };
+            // 이미지 파일 경로 설정 (EB 환경 고려)
+            String userDir = System.getProperty("user.dir");
+            String[] possiblePaths;
+            
+            if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
+                // EB 환경 경로
+                possiblePaths = new String[]{
+                    userDir + "/src/main/resources/static/upload/",
+                    userDir + "/build/resources/main/static/upload/",
+                    userDir + "/static/upload/"
+                };
+            } else {
+                // 로컬 개발 환경 경로
+                possiblePaths = new String[]{
+                    userDir + "/src/main/resources/static/upload/",
+                    userDir + "/build/resources/main/static/upload/",
+                    userDir + "/backend/src/main/resources/static/upload/",
+                    userDir + "/backend/build/resources/main/static/upload/",
+                    "src/main/resources/static/upload/",
+                    "build/resources/main/static/upload/"
+                };
+            }
             
             Path filePath = null;
             String usedPath = null;

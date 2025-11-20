@@ -156,12 +156,12 @@
     
     <!-- 좋아요 취소 -->
     <delete id="deleteBoardLike">
-        DELETE FROM board_likes WHERE user_id = #{arg0} AND board_id = #{arg1}
+        DELETE FROM board_likes WHERE user_id = #{user_id} AND board_id = #{board_id}
     </delete>
     
     <!-- 좋아요 존재 여부 확인 -->
     <select id="existsBoardLike" resultType="boolean">
-        SELECT COUNT(*) > 0 FROM board_likes WHERE user_id = #{arg0} AND board_id = #{arg1}
+        SELECT COUNT(*) > 0 FROM board_likes WHERE user_id = #{user_id} AND board_id = #{board_id}
     </select>
     
     <!-- 게시글 좋아요 수 조회 -->

@@ -4,8 +4,8 @@
 
     <!-- 신고 등록 -->
     <insert id="insertReport" parameterType="myapp.backend.domain.report.vo.ReportVO" useGeneratedKeys="true" keyProperty="report_id">
-        INSERT INTO user_report (reporter_id, reported_user_id, report_reason, report_content, target_type, target_id, report_status, created_at, updated_at)
-        VALUES (#{reporter_id}, #{reported_user_id}, #{report_reason}, #{report_content}, #{target_type}, #{target_id}, #{report_status}, NOW(), NOW())
+        INSERT INTO user_report (reporter_id, reported_user_id, report_reason, report_content, target_type, target_id, report_status)
+        VALUES (#{reporter_id}, #{reported_user_id}, #{report_reason}, #{report_content}, #{target_type}, #{target_id}, #{report_status})
     </insert>
 
     <!-- 내 신고 목록 조회 -->
@@ -21,8 +21,6 @@
             ur.report_status,
             ur.admin_id,
             ur.admin_comment,
-            ur.created_at,
-            ur.updated_at,
             reporter.username as reporter_username,
             reported.username as reported_username,
             admin_u.username as admin_username
@@ -32,7 +30,7 @@
         LEFT JOIN admin a ON ur.admin_id = a.admin_id
         LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
         WHERE ur.reporter_id = #{reporter_id}
-        ORDER BY ur.created_at DESC
+        ORDER BY ur.report_id DESC
     </select>
 
     <!-- 신고 상세 조회 (신고된 내용 포함) -->
@@ -48,8 +46,6 @@
             ur.report_status,
             ur.admin_id,
             ur.admin_comment,
-            ur.created_at,
-            ur.updated_at,
             reporter.username as reporter_username,
             reported.username as reported_username,
             admin_u.username as admin_username,
@@ -78,8 +74,6 @@
             ur.report_status,
             ur.admin_id,
             ur.admin_comment,
-            ur.created_at,
-            ur.updated_at,
             reporter.username as reporter_username,
             reported.username as reported_username,
             admin_u.username as admin_username
@@ -88,7 +82,7 @@
         LEFT JOIN user reported ON ur.reported_user_id = reported.user_id
         LEFT JOIN admin a ON ur.admin_id = a.admin_id
         LEFT JOIN user admin_u ON a.user_id = admin_u.user_id
-        ORDER BY ur.created_at DESC
+        ORDER BY ur.report_id DESC
     </select>
 
     <!-- 신고 상태 업데이트 -->
@@ -96,8 +90,7 @@
         UPDATE user_report 
         SET admin_id = #{admin_id},
             admin_comment = #{admin_comment},
-            report_status = #{status},
-            updated_at = NOW()
+            report_status = #{status}
         WHERE report_id = #{report_id}
     </update>
 

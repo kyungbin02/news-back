@@ -58,6 +58,7 @@ public class SecurityConfig {
                 
                 // <경빈> 뉴스 API는 인증 없이 접근 가능하도록 추가
                 .requestMatchers("/api/news/**").permitAll()
+                .requestMatchers("/api/rss/**").permitAll() // RSS 피드도 공개
                 .requestMatchers("/api/search-tracking/**").permitAll() // <경빈> 검색 추적 API 인증 해제
                 .requestMatchers("/api/news-click/**").permitAll() // <경빈> 뉴스 클릭 추적 API 인증 해제
                 

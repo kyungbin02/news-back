@@ -15,16 +15,7 @@ public class NoticeVO {
     private int admin_id;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
-    private boolean is_important;
-    
-    // 명시적인 getter/setter 추가
-    public boolean isIs_important() {
-        return is_important;
-    }
-    
-    public void setIs_important(boolean is_important) {
-        this.is_important = is_important;
-    }
+    private int is_important;  // TINYINT(1)과 호환을 위해 int로 변경
     private int view_count;
     
     // JOIN을 위한 필드

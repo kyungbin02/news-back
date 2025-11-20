@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Base64;
 
 @RestController
-@RequestMapping("/api/inquiry")
+@RequestMapping("api/inquiry")
 public class InquiryController {
     
     @Autowired

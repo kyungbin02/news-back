@@ -158,8 +158,18 @@ public class BoardServiceImpl implements BoardService {
     
     // 이미지 저장 및 게시글 연결
     private ImageSaveResult saveImageAndConnectToBoard(MultipartFile image, int boardId, int order) throws IOException {
-        // 업로드 디렉토리 설정
-        String uploadDir = System.getProperty("user.dir") + "/backend/src/main/resources/static/upload/";
+        // 업로드 디렉토리 설정 (EB 환경 고려)
+        String uploadDir;
+        String userDir = System.getProperty("user.dir");
+        
+        // EB 환경 확인 및 경로 설정
+        if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
+            // EB 환경: /var/app/current/src/main/resources/static/upload/
+            uploadDir = userDir + "/src/main/resources/static/upload/";
+        } else {
+            // 로컬 개발 환경
+            uploadDir = userDir + "/backend/src/main/resources/static/upload/";
+        }
         
         // 디렉토리가 없으면 생성
         File uploadDirectory = new File(uploadDir);
@@ -464,13 +474,26 @@ public class BoardServiceImpl implements BoardService {
                 filename = filename.substring(8); // "/upload/" 제거
             }
             
-            // 여러 경로에서 파일 찾아서 삭제
-            String[] possiblePaths = {
-                System.getProperty("user.dir") + "/backend/src/main/resources/static/upload/",
-                System.getProperty("user.dir") + "/backend/build/resources/main/static/upload/",
-                System.getProperty("user.dir") + "/src/main/resources/static/upload/",
-                System.getProperty("user.dir") + "/build/resources/main/static/upload/"
-            };
+            // 여러 경로에서 파일 찾아서 삭제 (EB 환경 고려)
+            String userDir = System.getProperty("user.dir");
+            String[] possiblePaths;
+            
+            if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
+                // EB 환경 경로
+                possiblePaths = new String[]{
+                    userDir + "/src/main/resources/static/upload/",
+                    userDir + "/build/resources/main/static/upload/",
+                    userDir + "/static/upload/"
+                };
+            } else {
+                // 로컬 개발 환경 경로
+                possiblePaths = new String[]{
+                    userDir + "/backend/src/main/resources/static/upload/",
+                    userDir + "/backend/build/resources/main/static/upload/",
+                    userDir + "/src/main/resources/static/upload/",
+                    userDir + "/build/resources/main/static/upload/"
+                };
+            }
             
             for (String path : possiblePaths) {
                 java.io.File file = new java.io.File(path + filename);
