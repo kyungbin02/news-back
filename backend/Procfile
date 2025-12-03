@@ -1,1 +1,1 @@
-web: java -Xmx512m -Xms256m -Dserver.port=$PORT -Dspring.profiles.active=prod -jar backend.jar
+web: java -Xmx256m -Xms128m -Dserver.port=$PORT -Dspring.profiles.active=prod -jar backend.jar

@@ -109,6 +109,10 @@ node_modules/
 tmp/
 temp/
 
+# Build artifacts and deployment packages
+backend/deploy/
+backend/deploy.zip
+
 # Application specific
 application-local.yml
 application-dev.yml
