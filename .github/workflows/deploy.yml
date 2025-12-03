@@ -27,11 +27,22 @@ jobs:
 
       - name: Generate deployment package
         run: |
+          # JAR 파일 확인
+          echo "=== JAR 파일 확인 ==="
+          ls -la backend/build/libs/*.jar || echo "JAR 파일 없음!"
+          echo ""
+          
           # 배포 디렉토리 생성
           mkdir -p deploy
           
           # JAR 파일 복사 (ZIP 루트에 위치)
-          cp backend/build/libs/backend-0.0.1-SNAPSHOT.jar deploy/
+          JAR_FILE=$(ls backend/build/libs/*.jar | grep -v plain | head -1)
+          if [ -z "$JAR_FILE" ]; then
+            echo "❌ JAR 파일을 찾을 수 없습니다!"
+            exit 1
+          fi
+          echo "JAR 파일: $JAR_FILE"
+          cp "$JAR_FILE" deploy/backend-0.0.1-SNAPSHOT.jar
           
           # Procfile 복사 (ZIP 루트에 위치)
           cp backend/Procfile deploy/
@@ -44,11 +55,15 @@ jobs:
           fi
           
           # ZIP 내용 확인 (디버깅용)
+          echo ""
           echo "=== 배포 패키지 내용 확인 ==="
-          ls -la deploy/
+          ls -lah deploy/
           echo ""
           echo "=== Procfile 내용 확인 ==="
           cat deploy/Procfile
+          echo ""
+          echo "=== JAR 파일 크기 확인 ==="
+          ls -lh deploy/*.jar
           echo ""
           
           # ZIP 생성 (deploy 디렉토리 내용을 ZIP 루트로)
@@ -57,8 +72,11 @@ jobs:
           cd ..
           
           # ZIP 파일 내용 확인
-          echo "=== ZIP 파일 내용 확인 ==="
-          unzip -l backend/deploy.zip | head -20
+          echo "=== ZIP 파일 내용 확인 (상위 30개) ==="
+          unzip -l backend/deploy.zip | head -30
+          echo ""
+          echo "=== ZIP 파일 크기 ==="
+          ls -lh backend/deploy.zip
 
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v20
