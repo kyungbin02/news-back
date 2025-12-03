@@ -50,7 +50,7 @@ public class NewsController {
             if (request.get("newsId") == null || request.get("title") == null || request.get("content") == null) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
-                errorResponse.put("message", "필수 필드가 누락되었습니다. (newsId, title, content 필요)");
+                errorResponse.put("message", "필수 필드가 누락되었다. (newsId, title, content 필요)");
                 return ResponseEntity.badRequest().body(errorResponse);
             }
 

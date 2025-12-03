@@ -27,18 +27,38 @@ jobs:
 
       - name: Generate deployment package
         run: |
-          mkdir -p backend/deploy
-          cp backend/build/libs/backend-0.0.1-SNAPSHOT.jar backend/deploy/
-          cp backend/Procfile backend/deploy/
-          # .platform 폴더도 ZIP에 포함 (Nginx 설정용)
-          # 루트 또는 backend 안의 .platform 폴더를 찾아서 복사
+          # 배포 디렉토리 생성
+          mkdir -p deploy
+          
+          # JAR 파일 복사 (ZIP 루트에 위치)
+          cp backend/build/libs/backend-0.0.1-SNAPSHOT.jar deploy/
+          
+          # Procfile 복사 (ZIP 루트에 위치)
+          cp backend/Procfile deploy/
+          
+          # .platform 폴더 복사 (Nginx 설정용)
           if [ -d ".platform" ]; then
-            cp -r .platform backend/deploy/
+            cp -r .platform deploy/
           elif [ -d "backend/.platform" ]; then
-            cp -r backend/.platform backend/deploy/.platform
+            cp -r backend/.platform deploy/.platform
           fi
-          cd backend/deploy
-          zip -r ../deploy.zip .
+          
+          # ZIP 내용 확인 (디버깅용)
+          echo "=== 배포 패키지 내용 확인 ==="
+          ls -la deploy/
+          echo ""
+          echo "=== Procfile 내용 확인 ==="
+          cat deploy/Procfile
+          echo ""
+          
+          # ZIP 생성 (deploy 디렉토리 내용을 ZIP 루트로)
+          cd deploy
+          zip -r ../backend/deploy.zip .
+          cd ..
+          
+          # ZIP 파일 내용 확인
+          echo "=== ZIP 파일 내용 확인 ==="
+          unzip -l backend/deploy.zip | head -20
 
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v20
