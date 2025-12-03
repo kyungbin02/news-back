@@ -13,17 +13,15 @@ import myapp.backend.domain.board.vo.BoardVO;
 import myapp.backend.domain.board.vo.ImageVO;
 import myapp.backend.domain.board.vo.BoardLikeVO;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 
 @Service
 public class BoardServiceImpl implements BoardService {
     @Autowired
     private BoardMapper boardMapper;
+    
+    @Autowired
+    private S3Uploader s3Uploader; // 경빈 S3 추가
     
     @Override
     public List<BoardVO> getBoardList() {
@@ -156,57 +154,15 @@ public class BoardServiceImpl implements BoardService {
         }
     }
     
-    // 이미지 저장 및 게시글 연결
+    // 이미지 저장 및 게시글 연결 (S3 업로드로 변경)
     private ImageSaveResult saveImageAndConnectToBoard(MultipartFile image, int boardId, int order) throws IOException {
-        // 업로드 디렉토리 설정 (EB 환경 고려)
-        String uploadDir;
-        String userDir = System.getProperty("user.dir");
+        // 경빈 S3 추가 - 게시글별 디렉터리에 업로드
+        String folder = "board/" + boardId;
+        String imageUrl = s3Uploader.upload(image, folder);
         
-        // EB 환경 확인 및 경로 설정
-        if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
-            // EB 환경: /var/app/current/src/main/resources/static/upload/
-            uploadDir = userDir + "/src/main/resources/static/upload/";
-        } else {
-            // 로컬 개발 환경
-            uploadDir = userDir + "/backend/src/main/resources/static/upload/";
-        }
+        System.out.println("이미지 저장됨(S3): " + imageUrl + " (게시글 ID: " + boardId + ", 순서: " + order + ")");
         
-        // 디렉토리가 없으면 생성
-        File uploadDirectory = new File(uploadDir);
-        if (!uploadDirectory.exists()) {
-            uploadDirectory.mkdirs();
-        }
-        
-        // 파일명 생성 (UUID + 원본 확장자)
-        String originalFilename = image.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        String storedFilename = UUID.randomUUID().toString() + extension;
-        
-        // 파일 저장
-        Path filePath = Paths.get(uploadDir, storedFilename);
-        Files.copy(image.getInputStream(), filePath);
-        
-        // 이미지 URL 생성
-        String imageUrl = "/upload/" + storedFilename;
-        
-        // ImageVO 생성 (실제로는 사용하지 않음, 로깅용)
-        ImageVO imageVO = new ImageVO();
-        imageVO.setImage_url(imageUrl);
-        imageVO.setImage_id(0);
-        
-        // MyBatis keyProperty로 설정된 실제 이미지 ID 사용
-        int actualImageId = imageVO.getImage_id();
-        
-        System.out.println("이미지 저장됨: " + storedFilename + " (게시글 ID: " + boardId + ", 순서: " + order + ")");
-        System.out.println("저장 경로: " + filePath.toAbsolutePath());
-        System.out.println("이미지 URL: " + imageUrl);
-        System.out.println("MyBatis 반환값: " + actualImageId);
-        System.out.println("실제 이미지 ID: " + actualImageId);
-        
-        return new ImageSaveResult(actualImageId, imageUrl);
+        return new ImageSaveResult(0, imageUrl);
     }
     
     // 이미지 저장 결과를 담는 내부 클래스
@@ -459,49 +415,56 @@ public class BoardServiceImpl implements BoardService {
     }
 
     
-    // 이미지 파일들을 실제로 삭제하는 메서드
+    // 이미지 파일들을 실제로 삭제하는 메서드 (S3 삭제로 변경)
     private void deleteImageFiles(String imageUrl) {
         if (imageUrl == null || imageUrl.trim().isEmpty()) {
             return;
         }
-        
-        // 쉼표로 구분된 여러 이미지 URL 처리
+
         String[] imageUrls = imageUrl.split(",");
-        
         for (String url : imageUrls) {
             String filename = url.trim();
-            if (filename.startsWith("/upload/")) {
-                filename = filename.substring(8); // "/upload/" 제거
+            if (filename.startsWith("http")) { // S3 URL인 경우
+                s3Uploader.delete(filename); // 경빈 S3 추가 - S3 객체 삭제
+            } else { // 레거시 로컬 파일인 경우
+                deleteLegacyLocalFile(filename);
             }
-            
-            // 여러 경로에서 파일 찾아서 삭제 (EB 환경 고려)
-            String userDir = System.getProperty("user.dir");
-            String[] possiblePaths;
-            
-            if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
-                // EB 환경 경로
-                possiblePaths = new String[]{
-                    userDir + "/src/main/resources/static/upload/",
-                    userDir + "/build/resources/main/static/upload/",
-                    userDir + "/static/upload/"
-                };
-            } else {
-                // 로컬 개발 환경 경로
-                possiblePaths = new String[]{
-                    userDir + "/backend/src/main/resources/static/upload/",
-                    userDir + "/backend/build/resources/main/static/upload/",
-                    userDir + "/src/main/resources/static/upload/",
-                    userDir + "/build/resources/main/static/upload/"
-                };
-            }
-            
-            for (String path : possiblePaths) {
-                java.io.File file = new java.io.File(path + filename);
-                if (file.exists()) {
-                    boolean deleted = file.delete();
-                    System.out.println("[BoardServiceImpl] 이미지 파일 삭제: " + path + filename + " (성공: " + deleted + ")");
-                    break; // 한 경로에서 삭제되면 다음 경로는 시도하지 않음
-                }
+        }
+    }
+
+    // 레거시 로컬 파일 삭제 (기존 로직 유지)
+    private void deleteLegacyLocalFile(String filename) {
+        if (filename.startsWith("/upload/")) {
+            filename = filename.substring(8); // "/upload/" 제거
+        }
+        
+        // 여러 경로에서 파일 찾아서 삭제 (EB 환경 고려)
+        String userDir = System.getProperty("user.dir");
+        String[] possiblePaths;
+        
+        if (userDir.contains("/var/app/current") || userDir.contains("/var/app")) {
+            // EB 환경 경로
+            possiblePaths = new String[]{
+                userDir + "/src/main/resources/static/upload/",
+                userDir + "/build/resources/main/static/upload/",
+                userDir + "/static/upload/"
+            };
+        } else {
+            // 로컬 개발 환경 경로
+            possiblePaths = new String[]{
+                userDir + "/backend/src/main/resources/static/upload/",
+                userDir + "/backend/build/resources/main/static/upload/",
+                userDir + "/src/main/resources/static/upload/",
+                userDir + "/build/resources/main/static/upload/"
+            };
+        }
+        
+        for (String path : possiblePaths) {
+            java.io.File file = new java.io.File(path + filename);
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                System.out.println("[BoardServiceImpl] 레거시 이미지 파일 삭제: " + path + filename + " (성공: " + deleted + ")");
+                break; // 한 경로에서 삭제되면 다음 경로는 시도하지 않음
             }
         }
     }

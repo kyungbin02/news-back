@@ -14,9 +14,11 @@ export interface SearchSuggestion {
 }
 
 // 검색어 추적
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080';
+
 export async function trackSearch(keyword: string): Promise<boolean> {
   try {
-    const response = await fetch('http://localhost:8080/api/search-tracking', {
+    const response = await fetch(`${baseUrl}/api/search-tracking`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,7 +37,7 @@ export async function trackSearch(keyword: string): Promise<boolean> {
 // 실시간 검색어 가져오기
 export async function getPopularSearches(limit: number = 10): Promise<SearchKeyword[]> {
   try {
-    const response = await fetch(`http://localhost:8080/api/search-tracking/top?limit=${limit}`, {
+    const response = await fetch(`${baseUrl}/api/search-tracking/top?limit=${limit}`, {
       cache: 'no-store',
       mode: 'cors',
     });
@@ -72,7 +74,7 @@ export async function getSearchSuggestions(query: string): Promise<SearchSuggest
       return [];
     }
 
-    const response = await fetch(`http://localhost:8080/api/search-tracking/recent?query=${encodeURIComponent(query)}`, {
+    const response = await fetch(`${baseUrl}/api/search-tracking/recent?query=${encodeURIComponent(query)}`, {
       cache: 'no-store',
       mode: 'cors',
     });

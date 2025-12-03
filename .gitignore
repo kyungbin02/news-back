@@ -112,3 +112,8 @@ temp/
 # Application specific
 application-local.yml
 application-dev.yml
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

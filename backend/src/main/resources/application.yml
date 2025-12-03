@@ -100,3 +100,14 @@ frontend:
 gemini:
   api:
     key: AIzaSyC9nv3TxsxA1Xy-QwLxxwDYG-4s9TbRUYE  # 직접 설정
+
+# 경빈 S3 추가 - 공통 AWS/S3 설정
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
+    region: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${S3_BUCKET_NAME:newsgo-images}
+      folder: columns

@@ -182,9 +182,9 @@ public class BoardController {
                     userDir + "/build/resources/main/static/upload/",
                     userDir + "/backend/src/main/resources/static/upload/",
                     userDir + "/backend/build/resources/main/static/upload/",
-                    "src/main/resources/static/upload/",
+                "src/main/resources/static/upload/",
                     "build/resources/main/static/upload/"
-                };
+            };
             }
             
             Path filePath = null;
