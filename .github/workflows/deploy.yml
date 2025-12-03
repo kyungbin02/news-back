@@ -46,6 +46,10 @@ jobs:
           
           # Procfile 복사 (ZIP 루트에 위치)
           cp backend/Procfile deploy/
+          # Procfile 형식 검증 및 수정 (줄바꿈 문제 해결)
+          sed -i 's/\r$//' deploy/Procfile
+          # 빈 줄 제거
+          sed -i '/^$/d' deploy/Procfile
           
           # .platform 폴더 복사 (Nginx 설정용)
           if [ -d ".platform" ]; then
