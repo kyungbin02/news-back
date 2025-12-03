@@ -35,14 +35,14 @@ jobs:
           # 배포 디렉토리 생성
           mkdir -p deploy
           
-          # JAR 파일 복사 (ZIP 루트에 위치)
+          # JAR 파일 복사 (ZIP 루트에 위치, 이름 단순화)
           JAR_FILE=$(ls backend/build/libs/*.jar | grep -v plain | head -1)
           if [ -z "$JAR_FILE" ]; then
             echo "❌ JAR 파일을 찾을 수 없습니다!"
             exit 1
           fi
           echo "JAR 파일: $JAR_FILE"
-          cp "$JAR_FILE" deploy/backend-0.0.1-SNAPSHOT.jar
+          cp "$JAR_FILE" deploy/backend.jar
           
           # Procfile 복사 (ZIP 루트에 위치)
           cp backend/Procfile deploy/
