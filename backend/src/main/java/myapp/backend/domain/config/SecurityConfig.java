@@ -101,7 +101,10 @@ public class SecurityConfig {
                 
                 // 알림 API: 인증 필요
                 .requestMatchers("/api/notifications/**").authenticated()
-                
+
+                // WebSocket/SockJS 엔드포인트는 HandshakeInterceptor에서 토큰 검증하므로 Security에서는 허용
+                .requestMatchers("/ws/**").permitAll()
+
                 // 그 외 모든 요청 인증 필요
                 .anyRequest().authenticated()
             )
