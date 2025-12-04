@@ -52,7 +52,7 @@ public class BoardController {
     // 인증된 사용자를 위한 게시글 목록 조회 (좋아요 상태 포함)
     @GetMapping("/board/authenticated")
     public ResponseEntity<List<BoardVO>> getBoardListWithLikeStatus(@AuthenticationPrincipal UserPrincipal principal) {
-        System.out.println("[BoardController] getBoardListWithLikeStatus API 호출됨");
+        System.out.println("[BoardController] getBoardListWithLikeStatus API 호출되었습니다");
         
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
