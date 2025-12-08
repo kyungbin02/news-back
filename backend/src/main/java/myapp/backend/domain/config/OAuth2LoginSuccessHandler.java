@@ -73,6 +73,19 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         UserVO user;
         try {
             user = userMapper.findBySnsIdAndSnsType(snsId, registrationId);
+
+            // ★ 추가: 구글 최초 로그인 시 DB에 자동 등록
+            if (user == null && "google".equals(registrationId)) {
+                user = new UserVO();
+                user.setSns_type("google");
+                user.setSns_id(snsId);
+                user.setUsername((String) attributes.get("name"));
+                user.setEmail((String) attributes.get("email"));
+                user.setUser_status("active");
+                userMapper.insertUser(user);
+                logger.info("구글 신규 사용자 등록 완료: snsId=" + snsId);
+            }
+
             logger.info("사용자 조회 성공: snsId=" + snsId + ", registrationId=" + registrationId);
 
             Integer dbUserId = userMapper.getUserIdBySnsInfo(snsId, registrationId);
@@ -95,24 +108,22 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // 제재 상태 확인
         String userStatus = user.getUser_status();
         logger.info("사용자 상태 확인: " + userStatus + ", 사용자 ID: " + user.getUser_id());
-        
+
         if (userStatus != null && !userStatus.equals("active")) {
             if ("suspended".equals(userStatus)) {
                 logger.info("정지된 사용자 로그인 시도");
-                // 7일 정지 상태 확인
                 if (user.getSanction_end_date() != null) {
-                    LocalDateTime endDate = LocalDateTime.parse(user.getSanction_end_date(), 
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    LocalDateTime endDate = LocalDateTime.parse(user.getSanction_end_date(),
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     if (LocalDateTime.now().isBefore(endDate)) {
-                        // 아직 정지 기간 중
                         try {
                             String encodedReason = URLEncoder.encode(user.getSanction_reason(), StandardCharsets.UTF_8);
                             String encodedEndDate = URLEncoder.encode(user.getSanction_end_date(), StandardCharsets.UTF_8);
                             String errorUrl = UriComponentsBuilder.fromUriString(frontendUrl)
-                                .queryParam("error", "account_suspended")
-                                .queryParam("reason", encodedReason)
-                                .queryParam("endDate", encodedEndDate)
-                                .build().toUriString();
+                                    .queryParam("error", "account_suspended")
+                                    .queryParam("reason", encodedReason)
+                                    .queryParam("endDate", encodedEndDate)
+                                    .build().toUriString();
                             logger.info("정지된 사용자 리다이렉트: " + errorUrl);
                             response.sendRedirect(errorUrl);
                             return;
@@ -122,30 +133,26 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                             return;
                         }
                     } else {
-                        // 정지 기간 만료 - 상태 복구
                         userMapper.updateUserStatus(user.getUser_id(), "active", null, null, null);
                         logger.info("사용자 " + user.getUser_id() + "의 정지 기간이 만료되어 상태를 복구했습니다.");
                     }
                 }
             } else if ("warning".equals(userStatus)) {
                 logger.info("경고 받은 사용자 로그인 시도");
-                // 경고 상태를 active로 변경 (한 번만 알림)
                 userMapper.updateUserStatus(user.getUser_id(), "active", null, null, null);
                 logger.info("사용자 " + user.getUser_id() + "의 경고를 확인하여 상태를 복구했습니다.");
-                
-                // 경고 알림 표시 후 로그인 허용
+
                 try {
                     boolean isAdmin = adminService.isAdmin(user.getUser_id());
                     String jwtToken = jwtService.generateToken(user, isAdmin);
                     String encodedReason = URLEncoder.encode(user.getSanction_reason(), StandardCharsets.UTF_8);
                     String warningUrl = UriComponentsBuilder.fromUriString(frontendUrl)
-                        .queryParam("warning", "true")
-                        .queryParam("reason", encodedReason)
-                        .queryParam("token", jwtToken)  // JWT 토큰도 함께 전달
-                        .build().toUriString();
+                            .queryParam("warning", "true")
+                            .queryParam("reason", encodedReason)
+                            .queryParam("token", jwtToken)
+                            .build().toUriString();
                     logger.info("경고 받은 사용자 리다이렉트 (경고 해제됨): " + warningUrl);
-                    
-                    // 강제 리다이렉트
+
                     response.sendRedirect(warningUrl);
                     return;
                 } catch (Exception e) {
@@ -160,15 +167,13 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             boolean isAdmin = adminService.isAdmin(user.getUser_id());
             String jwtToken = jwtService.generateToken(user, isAdmin);
             logger.info("JWT 토큰 생성 성공 (isAdmin: " + isAdmin + ")");
-            
+
             String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/")
                     .queryParam("token", jwtToken)
                     .build().toUriString();
-            
-            // 디버깅 로그 강화
+
             logger.info("Generated JWT and redirecting to: " + targetUrl);
 
-            // 강제 리다이렉트
             clearAuthenticationAttributes(request);
             response.sendRedirect(targetUrl);
         } catch (Exception e) {
