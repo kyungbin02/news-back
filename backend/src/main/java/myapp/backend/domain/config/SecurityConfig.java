@@ -135,7 +135,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
             "http://localhost:3000",  // 로컬 개발
             "https://www.newsgo.site",  // 프로덕션 프론트엔드
-            "https://news-front-main.vercel.app"  // Vercel 프론트엔드
+            "https://news-front-main-77h1ibb6i-moonminwons-projects.vercel.app"  // Vercel 프론트엔드
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));  // 모든 헤더 허용
