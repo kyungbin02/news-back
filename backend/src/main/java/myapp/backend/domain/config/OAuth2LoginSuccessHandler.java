@@ -82,7 +82,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 user.setUsername((String) attributes.get("name"));
                 user.setEmail((String) attributes.get("email"));
                 user.setUser_status("active");
-                userMapper.insertUser(user);
+                userMapper.save(user);
                 logger.info("구글 신규 사용자 등록 완료: snsId=" + snsId);
             }
 
