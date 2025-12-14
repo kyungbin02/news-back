@@ -31,10 +31,6 @@ spring:
               - name
               - email
               - profile_image
-              - nickname
-              - age
-              - birthyear
-              - mobile
           kakao:
             client-id: cca642db7300e1c808f9aacaf9894c0a
             client-secret: LJsMaH2dXOamJJ48Y66M03TA036jFe7D
