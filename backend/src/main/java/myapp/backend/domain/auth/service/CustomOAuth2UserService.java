@@ -33,7 +33,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             Map<String, Object> response = (Map<String, Object>) attributes.get("response");
             String snsId = (String) response.get("id");
             String email = (String) response.get("email");
-            String username = (String) response.get("nickname");
+            String username = (String) response.get("name");
             String profileImg = (String) response.get("profile_image");
 
             System.out.println("=== 네이버 로그인 처리 시작 ===");
